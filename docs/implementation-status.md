@@ -29,17 +29,12 @@
 
 ## Still Needs User / Remote Setup
 
-- Configure Supabase Auth redirect URLs for the local and deployed web app URLs.
-- Run `supabase/grants.sql` if it has not yet been applied after the first
-  schema execution.
-- Test sign-in and task sync against the live Supabase project.
-- Configure Supabase Auth with the GitHub Pages production URL.
-- Test the deployed HTTPS PWA on desktop.
-- Install the deployed HTTPS PWA from iPhone Safari.
+- Push the latest local commits to GitHub after local changes.
+- Reinstall the iPhone Home Screen PWA after icon changes because iOS caches
+  home screen icons aggressively.
+- Test the latest deployed layout after GitHub Actions finishes.
 - Decide whether always-on-top should remain an OS/tooling concern or justify a
   native Windows wrapper later.
-- Complete Codex Supabase MCP authentication. The config entry is written, but
-  `codex.exe` login was blocked by WindowsApps access permissions in this shell.
 
 ## Current Architecture
 
@@ -61,5 +56,5 @@ Supabase MCP setup instructions are documented in:
 docs/codex-supabase-mcp.md
 ```
 
-Status: MCP server config has been added to `~/.codex/config.toml`; authentication
-is still pending.
+Status: MCP server config has been added to `~/.codex/config.toml`; CLI PATH was
+fixed so `codex` can be run from PowerShell.

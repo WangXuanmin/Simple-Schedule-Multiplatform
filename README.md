@@ -77,6 +77,7 @@ configuration.
 - `docs/sync-design.md`
 - `docs/implementation-status.md`
 - `docs/deployment.md`
+- `docs/project-context-summary.md`
 
 ## Current Implementation
 

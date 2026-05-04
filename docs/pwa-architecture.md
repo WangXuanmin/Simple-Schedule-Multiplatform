@@ -3,13 +3,13 @@
 ## Overview
 
 Simple Schedule PWA uses one installable web app for both iPhone and Windows.
-The app stores data locally first for speed and offline use, then syncs through
-a small API backed by a cloud database. The cloud database is required because
+The app stores data locally first for speed and offline use, then syncs directly
+with Supabase Auth and Supabase Postgres. The cloud database is required because
 multi-device sync is a core requirement.
 
 ```text
 iPhone Home Screen PWA ----\
-                            -> Sync API -> Database
+                            -> Supabase Auth + Postgres
 Windows installed PWA ------/
 
 Both clients run the same apps/web code.
@@ -26,18 +26,13 @@ Simple-Schedule-Multiplatform/
         manifest.webmanifest
         icons/
       src/
-        app/
-        components/
         data/
-        sync/
-        styles/
+        ui/
+        styles.css
       index.html
       vite.config.ts
     api/
-      src/
-        routes/
-        services/
-        db/
+      README.md
   packages/
     core/
       src/
@@ -66,8 +61,9 @@ Recommended stack:
 - React
 - Vite
 - TypeScript
-- vite-plugin-pwa
-- Dexie or idb for IndexedDB
+- `@supabase/supabase-js`
+- Hand-written IndexedDB wrapper
+- Hand-written service worker
 
 ### Service Worker
 
@@ -75,14 +71,18 @@ The service worker owns offline app availability:
 
 - Cache app shell assets
 - Serve the app when offline
-- Optionally cache API reads
+- Cache PWA icons and manifest
 - Receive Web Push events later
 
 It should not contain core task business rules. Those stay in `packages/core`.
 
-### Sync API
+### Apps API
 
-The API owns durable server state:
+`apps/api` is not active in the current implementation. It is reserved for a
+future server-controlled sync phase if direct Supabase access becomes too
+limited.
+
+Future API responsibilities would be:
 
 - User identity
 - Canonical task records
@@ -95,8 +95,7 @@ Recommended stack:
 - Node.js
 - TypeScript
 - Fastify or Hono
-- SQLite for local development
-- PostgreSQL for production hosting
+- PostgreSQL through Supabase or another hosted provider
 
 ### Cloud Database
 
@@ -110,12 +109,12 @@ setup steps, schema, RLS policies, and environment variable rules.
 Suggested tables:
 
 ```text
-users
 tasks
 task_operations
-sync_cursors
 web_push_subscriptions
 ```
+
+User records are owned by Supabase Auth.
 
 For personal use, the server can be small, but it still needs durable cloud
 storage so Windows and iPhone can converge on the same task state.
@@ -129,14 +128,14 @@ Clients should never wait for the network before updating the UI.
 1. Create a `TaskOperation`.
 2. Apply it to local IndexedDB.
 3. Mark it as pending.
-4. Try to push it to the API.
+4. Try to push it to Supabase.
 5. Pull remote changes.
 
 ### Server Authority
 
-The API plus cloud database is the final shared source of truth across devices.
-If two devices change the same task, the server applies the conflict policy and
-returns the resolved record.
+Supabase Postgres is the final shared source of truth across devices. The
+current direct-client implementation uses task-level `updatedAt` and soft delete
+semantics. A future `apps/api` can enforce stricter operation ordering if needed.
 
 ## Sync Flow
 
@@ -144,8 +143,8 @@ returns the resolved record.
 App starts
   -> Load local IndexedDB tasks
   -> Render immediately
-  -> If online, push pending operations
-  -> Pull changes since last cursor
+  -> If online, push pending task writes
+  -> Pull tasks from Supabase
   -> Merge remote changes into local cache
   -> Render updated list
 
@@ -156,6 +155,8 @@ Task changes
 ```
 
 ## API Shape
+
+Reserved for future `apps/api` implementation:
 
 ```text
 POST /auth/sign-in
@@ -180,9 +181,9 @@ tasks
   createdAt
   updatedAt
 
-pendingOperations
+pendingWrites
   id
-  operation
+  task
   createdAt
   retryCount
   lastError
@@ -199,10 +200,12 @@ MVP rules:
 - Soft delete wins over update.
 - Newer `updatedAt` wins for normal fields.
 - Reopen and complete are treated as field updates on `completedAt`.
-- Server rejects malformed timestamps and missing task IDs.
+- Supabase RLS ensures each authenticated user can read/write only their own
+  task rows.
 
 This keeps the implementation understandable and good enough for one-person
-multi-device use.
+multi-device use. If multiple devices frequently edit the same task while
+offline, `apps/api` should be promoted from reserved to active.
 
 ## PWA Requirements
 
@@ -241,9 +244,9 @@ Important limits:
 Recommended simple deployment:
 
 ```text
-apps/web -> static hosting with HTTPS
-apps/api -> small Node.js server
-database -> managed cloud PostgreSQL
+apps/web -> GitHub Pages HTTPS
+database/auth -> Supabase
+apps/api -> reserved
 ```
 
 For early testing on the same Wi-Fi:
@@ -252,8 +255,8 @@ For early testing on the same Wi-Fi:
 Windows dev server -> iPhone Safari opens local network URL
 ```
 
-For real iPhone Home Screen install and service worker behavior, use HTTPS
-through a public host or a trusted tunnel during testing.
+For real iPhone Home Screen install and service worker behavior, use the GitHub
+Pages HTTPS URL.
 
 ## Implementation Phases
 

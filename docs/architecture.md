@@ -14,7 +14,7 @@ The short version:
 
 ```text
 iPhone Home Screen PWA ----\
-                            -> Sync API -> Database
+                            -> Supabase Auth + Postgres
 Windows installed PWA ------/
 
 Both devices run apps/web.
@@ -22,4 +22,5 @@ Shared task rules live in packages/core.
 ```
 
 This project has only two app surfaces: `apps/web` for the installable PWA and
-`apps/api` for sync.
+`apps/api` as a reserved future sync service. The active implementation syncs
+directly from `apps/web` to Supabase.
