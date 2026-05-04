@@ -19,6 +19,7 @@ export function App() {
   const [deadlineAt, setDeadlineAt] = useState(toInputValue(addHours(new Date(), 1)));
   const [syncState, setSyncState] = useState<SyncState>(navigator.onLine ? "idle" : "offline");
   const [message, setMessage] = useState("Ready");
+  const [todayStartMs, setTodayStartMs] = useState(() => startOfDay(new Date()).getTime());
 
   const visibleTasks = useMemo(() => hideExpiredCompletedTasks(tasks), [tasks]);
   const todoTasks = useMemo(() => getTodoTasks(visibleTasks), [visibleTasks]);
@@ -45,6 +46,31 @@ export function App() {
     return () => {
       window.removeEventListener("online", online);
       window.removeEventListener("offline", offline);
+    };
+  }, []);
+
+  useEffect(() => {
+    let timeoutId: number;
+
+    const refreshToday = () => setTodayStartMs(startOfDay(new Date()).getTime());
+    const scheduleNextRefresh = () => {
+      const now = new Date();
+      const nextDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1);
+      timeoutId = window.setTimeout(() => {
+        refreshToday();
+        scheduleNextRefresh();
+      }, nextDay.getTime() - now.getTime());
+    };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refreshToday();
+    };
+
+    scheduleNextRefresh();
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
     };
   }, []);
 
@@ -253,7 +279,7 @@ export function App() {
             currentTasks.map((task) => (
               <li
                 className={`task-item ${task.completedAt ? "is-completed" : ""} ${
-                  isOverdue(task) ? "is-overdue" : ""
+                  isOverdue(task, todayStartMs) ? "is-overdue" : ""
                 }`}
                 key={task.id}
               >
@@ -262,8 +288,10 @@ export function App() {
                 </button>
                 <div className="task-copy">
                   <strong>{task.title}</strong>
-                  <small className={deadlineToneClass(task)}>
-                    {task.completedAt ? `Completed ${formatCompleted(task.completedAt)}` : formatDeadline(task.deadlineAt)}
+                  <small className={deadlineToneClass(task, todayStartMs)}>
+                    {task.completedAt
+                      ? `Completed ${formatCompleted(task.completedAt, todayStartMs)}`
+                      : formatDeadline(task.deadlineAt, todayStartMs)}
                   </small>
                 </div>
                 <button className="delete-button" type="button" title="Delete" onClick={() => remove(task)}>
@@ -305,11 +333,10 @@ function formatToday() {
   }).format(new Date());
 }
 
-function formatDeadline(value: string) {
+function formatDeadline(value: string, todayStartMs: number) {
   const date = new Date(value);
-  const today = startOfDay(new Date());
   const target = startOfDay(date);
-  const dayDiff = Math.round((target.getTime() - today.getTime()) / 86400000);
+  const dayDiff = Math.round((target.getTime() - todayStartMs) / 86400000);
   const time = new Intl.DateTimeFormat("zh-CN", {
     hour: "2-digit",
     minute: "2-digit",
@@ -327,11 +354,10 @@ function formatDeadline(value: string) {
   return `${day} - ${time}`;
 }
 
-function formatCompleted(value: string) {
+function formatCompleted(value: string, todayStartMs: number) {
   const date = new Date(value);
-  const today = startOfDay(new Date());
   const target = startOfDay(date);
-  const dayDiff = Math.round((target.getTime() - today.getTime()) / 86400000);
+  const dayDiff = Math.round((target.getTime() - todayStartMs) / 86400000);
 
   if (dayDiff === 0) {
     return new Intl.DateTimeFormat("zh-CN", {
@@ -370,18 +396,17 @@ function startOfDay(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
-function deadlineToneClass(task: Task) {
+function deadlineToneClass(task: Task, todayStartMs: number) {
   if (task.completedAt) return "";
 
-  const today = startOfDay(new Date());
   const target = startOfDay(new Date(task.deadlineAt));
-  const dayDiff = Math.round((target.getTime() - today.getTime()) / 86400000);
+  const dayDiff = Math.round((target.getTime() - todayStartMs) / 86400000);
 
   if (dayDiff <= 0) return "is-deadline-due";
   if (dayDiff < 3) return "is-deadline-soon";
   return "";
 }
 
-function isOverdue(task: Task) {
-  return !task.completedAt && startOfDay(new Date(task.deadlineAt)) <= startOfDay(new Date());
+function isOverdue(task: Task, todayStartMs: number) {
+  return !task.completedAt && startOfDay(new Date(task.deadlineAt)).getTime() <= todayStartMs;
 }

@@ -63,6 +63,8 @@ Deadline color rule:
 - Future deadline less than 3 calendar days away: deadline time is blue.
 - Later future deadlines use the default muted time color.
 - Completed tasks show completion time and do not use deadline urgency colors.
+- Deadline urgency colors automatically recalculate after the local date changes
+  and when the app returns to the foreground.
 
 ### Completed
 

@@ -21,6 +21,8 @@
   personal single-user workflow.
 - Added deadline urgency colors: today or earlier uses red, and future
   deadlines less than 3 calendar days away use blue.
+- Added automatic local date refresh so deadline urgency colors update after
+  midnight or when the app returns to the foreground.
 - Added GitHub Pages deployment workflow for HTTPS hosting.
 - GitHub Pages deployment succeeded:
   `https://wangxuanmin.github.io/Simple-Schedule-Multiplatform/`
