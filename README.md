@@ -90,6 +90,7 @@ configuration.
 - Automatic sync after task changes
 - Todo / Completed task UI
 - Single visible floating action: add task
+- PNG PWA icons for iOS Home Screen and browser install surfaces
 
 Before the app can sync against Supabase, run `supabase/schema.sql` in the
 Supabase SQL Editor.

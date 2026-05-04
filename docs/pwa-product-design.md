@@ -151,6 +151,13 @@ Keep the original feeling:
 - Clear overdue state
 - Completed tasks visually softened
 
+Home Screen icon:
+
+- iOS uses `icons/apple-touch-icon.png`.
+- The web manifest uses PNG icons at 192x192 and 512x512.
+- SVG remains only as a source/reference asset because Safari Home Screen icons
+  should use PNG for reliable rendering.
+
 Do not make it a marketing landing page. The first screen after opening should
 be the actual task app.
 

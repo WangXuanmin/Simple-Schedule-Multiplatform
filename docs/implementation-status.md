@@ -24,6 +24,7 @@
   `https://wangxuanmin.github.io/Simple-Schedule-Multiplatform/`
 - Adjusted Windows PWA layout so the task surface fills the app viewport by
   default instead of rendering as a centered card.
+- Added PNG PWA icons for Safari Home Screen and web manifest usage.
 - Kept `apps/api` as a later phase for server-controlled sync.
 
 ## Still Needs User / Remote Setup
