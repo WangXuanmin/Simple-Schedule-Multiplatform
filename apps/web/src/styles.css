@@ -324,12 +324,30 @@ h1 {
 }
 
 @media (min-width: 700px) {
+  html {
+    min-width: 360px;
+    min-height: 560px;
+  }
+
+  body {
+    min-height: 560px;
+  }
+
   .app-shell {
-    padding: 8px;
+    min-height: max(560px, 100vh);
+    min-height: max(560px, 100dvh);
+    place-items: stretch;
+    padding: 0;
   }
 
   .widget {
-    width: min(100%, 520px);
+    width: 100%;
+    max-width: none;
+    min-height: 560px;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
   }
 }
 
