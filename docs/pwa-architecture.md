@@ -233,6 +233,8 @@ Important limits:
 - Browser-installed PWAs cannot reliably force always-on-top.
 - Startup-on-login is possible through OS/browser shortcuts, but less direct
   than a desktop-only app.
+- CSS can define a minimum content height and scrolling behavior, but it cannot
+  enforce an operating-system-level minimum window size for an Edge/Chrome PWA.
 
 ## Deployment
 

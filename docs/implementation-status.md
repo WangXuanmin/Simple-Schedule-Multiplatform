@@ -22,6 +22,8 @@
 - Added GitHub Pages deployment workflow for HTTPS hosting.
 - GitHub Pages deployment succeeded:
   `https://wangxuanmin.github.io/Simple-Schedule-Multiplatform/`
+- Adjusted installed Windows PWA layout to reduce outer background space and
+  preserve a minimum scrollable content height.
 - Kept `apps/api` as a later phase for server-controlled sync.
 
 ## Still Needs User / Remote Setup
@@ -33,6 +35,8 @@
 - Configure Supabase Auth with the GitHub Pages production URL.
 - Test the deployed HTTPS PWA on desktop.
 - Install the deployed HTTPS PWA from iPhone Safari.
+- Decide whether always-on-top should remain an OS/tooling concern or justify a
+  native Windows wrapper later.
 - Complete Codex Supabase MCP authentication. The config entry is written, but
   `codex.exe` login was blocked by WindowsApps access permissions in this shell.
 
