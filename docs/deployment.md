@@ -13,16 +13,16 @@ GitHub Pages
 
 ## Repository Assumption
 
-Recommended repository name:
+Repository name:
 
 ```text
 Simple-Schedule-Multiplatform
 ```
 
-For a project Pages site, the app will usually be served from:
+GitHub Pages production URL:
 
 ```text
-https://<github-user>.github.io/Simple-Schedule-Multiplatform/
+https://wangxuanmin.github.io/Simple-Schedule-Multiplatform/
 ```
 
 The Vite config uses `GITHUB_PAGES=true` to set the correct base path for this
@@ -66,7 +66,13 @@ After the repository is pushed:
 
 ## Supabase Auth URLs
 
-After GitHub Pages gives the final HTTPS URL, update Supabase:
+GitHub Pages deployment is active at:
+
+```text
+https://wangxuanmin.github.io/Simple-Schedule-Multiplatform/
+```
+
+Update Supabase:
 
 ```text
 Authentication -> URL Configuration
@@ -82,8 +88,13 @@ http://127.0.0.1:5173/**
 Add the GitHub Pages URL:
 
 ```text
-https://<github-user>.github.io/Simple-Schedule-Multiplatform/**
+https://wangxuanmin.github.io/Simple-Schedule-Multiplatform/**
 ```
 
 Set `Site URL` to the production GitHub Pages URL once it is confirmed.
 
+Recommended Site URL:
+
+```text
+https://wangxuanmin.github.io/Simple-Schedule-Multiplatform/
+```

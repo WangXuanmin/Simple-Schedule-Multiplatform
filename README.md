@@ -95,3 +95,9 @@ Before the app can sync against Supabase, run `supabase/schema.sql` in the
 Supabase SQL Editor.
 
 For GitHub Pages HTTPS deployment, see `docs/deployment.md`.
+
+Production URL:
+
+```text
+https://wangxuanmin.github.io/Simple-Schedule-Multiplatform/
+```

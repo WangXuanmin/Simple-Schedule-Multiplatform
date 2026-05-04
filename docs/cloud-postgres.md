@@ -146,10 +146,10 @@ After deployment, add the production HTTPS URL:
 
 ```text
 Site URL:
-https://<production-domain>
+https://wangxuanmin.github.io/Simple-Schedule-Multiplatform/
 
 Redirect URLs:
-https://<production-domain>/**
+https://wangxuanmin.github.io/Simple-Schedule-Multiplatform/**
 ```
 
 Keep exact production URLs where possible. Wildcards are acceptable for local

@@ -20,6 +20,8 @@
 - Removed the visible sign-out button from the main task surface for the
   personal single-user workflow.
 - Added GitHub Pages deployment workflow for HTTPS hosting.
+- GitHub Pages deployment succeeded:
+  `https://wangxuanmin.github.io/Simple-Schedule-Multiplatform/`
 - Kept `apps/api` as a later phase for server-controlled sync.
 
 ## Still Needs User / Remote Setup
@@ -28,7 +30,9 @@
 - Run `supabase/grants.sql` if it has not yet been applied after the first
   schema execution.
 - Test sign-in and task sync against the live Supabase project.
-- Deploy `apps/web` to HTTPS so iPhone Safari can install it cleanly.
+- Configure Supabase Auth with the GitHub Pages production URL.
+- Test the deployed HTTPS PWA on desktop.
+- Install the deployed HTTPS PWA from iPhone Safari.
 - Complete Codex Supabase MCP authentication. The config entry is written, but
   `codex.exe` login was blocked by WindowsApps access permissions in this shell.
 
