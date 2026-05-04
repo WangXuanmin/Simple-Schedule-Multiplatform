@@ -128,10 +128,10 @@ Settings should stay minimal:
 - Keyboard-friendly add flow.
 - Visible delete and complete controls.
 - No native always-on-top in the PWA MVP.
-- In installed desktop PWA mode, the task panel fills the app window to avoid
-  wasting space on a large outer background.
-- The app keeps a minimum content height and scrolls if the desktop window is
-  resized too short.
+- The task surface fills the app viewport by default instead of rendering as a
+  centered card.
+- The app does not enforce an artificial minimum content height. If the window
+  is resized very short, normal browser/PWA scrolling handles overflow.
 
 Always-on-top note:
 

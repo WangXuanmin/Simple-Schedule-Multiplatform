@@ -22,8 +22,8 @@
 - Added GitHub Pages deployment workflow for HTTPS hosting.
 - GitHub Pages deployment succeeded:
   `https://wangxuanmin.github.io/Simple-Schedule-Multiplatform/`
-- Adjusted installed Windows PWA layout to reduce outer background space and
-  preserve a minimum scrollable content height.
+- Adjusted Windows PWA layout so the task surface fills the app viewport by
+  default instead of rendering as a centered card.
 - Kept `apps/api` as a later phase for server-controlled sync.
 
 ## Still Needs User / Remote Setup
