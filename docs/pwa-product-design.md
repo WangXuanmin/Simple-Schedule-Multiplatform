@@ -57,6 +57,13 @@ Task item:
 - Deadline text
 - Delete action
 
+Deadline color rule:
+
+- Deadline today or earlier: deadline time is red.
+- Future deadline less than 3 calendar days away: deadline time is blue.
+- Later future deadlines use the default muted time color.
+- Completed tasks show completion time and do not use deadline urgency colors.
+
 ### Completed
 
 Shows completed tasks sorted by latest completion time.
@@ -149,6 +156,7 @@ Keep the original feeling:
 - Rounded controls around 8px
 - Calm accent color for actions
 - Clear overdue state
+- Clear near-deadline time color
 - Completed tasks visually softened
 
 Home Screen icon:

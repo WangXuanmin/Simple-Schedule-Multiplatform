@@ -262,7 +262,9 @@ export function App() {
                 </button>
                 <div className="task-copy">
                   <strong>{task.title}</strong>
-                  <small>{task.completedAt ? `Completed ${formatCompleted(task.completedAt)}` : formatDeadline(task.deadlineAt)}</small>
+                  <small className={deadlineToneClass(task)}>
+                    {task.completedAt ? `Completed ${formatCompleted(task.completedAt)}` : formatDeadline(task.deadlineAt)}
+                  </small>
                 </div>
                 <button className="delete-button" type="button" title="Delete" onClick={() => remove(task)}>
                   x
@@ -366,6 +368,18 @@ function addHours(date: Date, hours: number) {
 
 function startOfDay(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function deadlineToneClass(task: Task) {
+  if (task.completedAt) return "";
+
+  const today = startOfDay(new Date());
+  const target = startOfDay(new Date(task.deadlineAt));
+  const dayDiff = Math.round((target.getTime() - today.getTime()) / 86400000);
+
+  if (dayDiff <= 0) return "is-deadline-due";
+  if (dayDiff < 3) return "is-deadline-soon";
+  return "";
 }
 
 function isOverdue(task: Task) {

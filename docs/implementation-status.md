@@ -19,6 +19,8 @@
 - Removed the visible manual sync button from the main task surface.
 - Removed the visible sign-out button from the main task surface for the
   personal single-user workflow.
+- Added deadline urgency colors: today or earlier uses red, and future
+  deadlines less than 3 calendar days away use blue.
 - Added GitHub Pages deployment workflow for HTTPS hosting.
 - GitHub Pages deployment succeeded:
   `https://wangxuanmin.github.io/Simple-Schedule-Multiplatform/`

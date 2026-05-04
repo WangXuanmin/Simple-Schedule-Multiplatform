@@ -306,6 +306,16 @@ h1 {
   font-size: 0.76rem;
 }
 
+.task-copy small.is-deadline-due {
+  color: #ad3d35;
+  font-weight: 700;
+}
+
+.task-copy small.is-deadline-soon {
+  color: #2f6fa8;
+  font-weight: 700;
+}
+
 .delete-button {
   color: #ad3d35;
   font-weight: 700;
