@@ -16,6 +16,10 @@
 - Implemented IndexedDB local cache.
 - Implemented pending cloud-write queue for offline or failed writes.
 - Implemented automatic cloud-write attempts after task changes.
+- Enabled Supabase Realtime for `public.tasks` and added client-side Realtime
+  refresh so other devices update after task changes without manual refresh.
+- Added foreground and online-resume sync to reconcile changes missed while the
+  app was backgrounded, sleeping, or offline.
 - Removed the visible manual sync button from the main task surface.
 - Removed the visible sign-out button from the main task surface for the
   personal single-user workflow.

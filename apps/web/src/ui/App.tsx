@@ -93,6 +93,56 @@ export function App() {
     };
   }, [user]);
 
+  useEffect(() => {
+    if (!user || !navigator.onLine) return;
+
+    let syncTimerId: number | undefined;
+    const syncSoon = () => {
+      if (syncTimerId) window.clearTimeout(syncTimerId);
+      syncTimerId = window.setTimeout(() => {
+        runSync(user);
+      }, 300);
+    };
+
+    const channel = supabase
+      .channel(`tasks:${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "tasks",
+          filter: `user_id=eq.${user.id}`
+        },
+        syncSoon
+      )
+      .subscribe();
+
+    return () => {
+      if (syncTimerId) window.clearTimeout(syncTimerId);
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const syncWhenOnline = () => runSync(user);
+    const syncWhenVisible = () => {
+      if (document.visibilityState === "visible" && navigator.onLine) {
+        runSync(user);
+      }
+    };
+
+    window.addEventListener("online", syncWhenOnline);
+    document.addEventListener("visibilitychange", syncWhenVisible);
+
+    return () => {
+      window.removeEventListener("online", syncWhenOnline);
+      document.removeEventListener("visibilitychange", syncWhenVisible);
+    };
+  }, [user]);
+
   async function runSync(activeUser = user) {
     if (!activeUser || !navigator.onLine) {
       setSyncState("offline");

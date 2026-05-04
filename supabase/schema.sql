@@ -15,6 +15,14 @@ create index if not exists tasks_user_active_deadline_idx
 create index if not exists tasks_user_updated_idx
   on public.tasks (user_id, updated_at);
 
+do $$
+begin
+  alter publication supabase_realtime add table public.tasks;
+exception
+  when duplicate_object then null;
+  when undefined_object then null;
+end $$;
+
 alter table public.tasks enable row level security;
 
 grant usage on schema public to authenticated;

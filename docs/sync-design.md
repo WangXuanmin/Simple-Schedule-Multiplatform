@@ -1,11 +1,16 @@
 # Sync Design
 
-## MVP Sync Strategy
+## Current Sync Strategy
 
-Use normal request/response sync first. Real-time push can come later.
+Use normal request/response sync as the durable path, and Supabase Realtime as
+the fast notification path.
 
 Cloud database sync is mandatory for this project. IndexedDB is only the local
 cache and offline queue; it is not the long-term shared source of truth.
+
+Realtime events are not treated as authoritative task data. They only tell the
+client that the cloud table changed, then the client performs a normal cloud
+pull. This keeps conflict behavior centralized in the existing sync path.
 
 ## API Endpoints
 
@@ -60,6 +65,31 @@ Row Level Security. See `docs/cloud-postgres.md`.
 3. Merge changes into local cache.
 4. Update `last_sync_cursor`.
 
+## Realtime Refresh
+
+Each signed-in client subscribes to Supabase Postgres Changes for its own
+`public.tasks` rows:
+
+```text
+schema: public
+table: tasks
+filter: user_id=eq.<current user id>
+event: *
+```
+
+When another device creates, completes, reopens, or soft-deletes a task,
+Supabase sends a Realtime event. The receiving client waits briefly to debounce
+rapid changes, then runs the normal sync loop.
+
+If a device was asleep, offline, or backgrounded and misses a Realtime event, it
+runs the same sync loop when it returns to the foreground or comes back online.
+
+Database requirement:
+
+```sql
+alter publication supabase_realtime add table public.tasks;
+```
+
 ## MVP Conflict Rules
 
 - Soft delete wins.
@@ -68,7 +98,6 @@ Row Level Security. See `docs/cloud-postgres.md`.
 
 ## Later Improvements
 
-- WebSocket or server-sent events
 - Push notifications
 - Shared lists
 - Reminder notifications

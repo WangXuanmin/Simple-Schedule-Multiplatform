@@ -54,6 +54,7 @@ The web app owns user interaction:
 - Stores tasks and pending operations in IndexedDB
 - Registers the service worker
 - Calls Supabase automatically after task changes when online
+- Subscribes to Supabase Realtime task changes for faster cross-device refresh
 - Shows sync state
 
 Recommended stack:
@@ -152,6 +153,16 @@ Task changes
   -> Update IndexedDB immediately
   -> Attempt Supabase write automatically
   -> Queue failed writes for the next sync attempt
+
+Remote task changes
+  -> Supabase Realtime sends a Postgres Changes event
+  -> Client debounces briefly
+  -> Client runs the normal cloud pull
+  -> IndexedDB and UI are refreshed
+
+App resumes or network returns
+  -> Client runs the normal cloud pull
+  -> Missed Realtime events are reconciled
 ```
 
 ## API Shape
@@ -281,7 +292,8 @@ Status: implemented as the first working PWA shell.
 - Sync between Windows browser and iPhone Safari
 
 Status: direct Supabase Auth + task-table sync is implemented in `apps/web`.
-`apps/api` remains reserved for later operation-based sync.
+Supabase Realtime is enabled for faster device-to-device refresh. `apps/api`
+remains reserved for later operation-based sync.
 
 ### Phase 3: Polish
 

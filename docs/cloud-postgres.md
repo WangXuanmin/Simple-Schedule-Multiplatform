@@ -82,6 +82,9 @@ Phase 2: Add apps/api for operation-based sync and conflict resolution
 Status: `supabase/schema.sql` has been executed successfully in the Supabase SQL
 Editor.
 
+Status: `public.tasks` has also been added to the `supabase_realtime`
+publication so signed-in clients can receive task-change notifications.
+
 ## Supabase Project Security Settings
 
 When creating the Supabase project, use these settings:
@@ -111,6 +114,15 @@ grant usage on schema public to authenticated;
 grant select, insert, update, delete on public.tasks to authenticated;
 grant select, insert on public.task_operations to authenticated;
 ```
+
+Required Realtime publication:
+
+```sql
+alter publication supabase_realtime add table public.tasks;
+```
+
+The PWA uses this only as a notification channel. After receiving a task-change
+event, the client runs the normal authenticated pull from Supabase.
 
 If the app shows `Sync failed` and local tasks do not appear in Supabase, run:
 
@@ -314,4 +326,6 @@ and avoid prepared statements if the provider documents that limitation.
 2. Use IndexedDB as a local cache and pending-operation queue.
 3. On sign-in, pull tasks from Supabase.
 4. On local changes, update IndexedDB immediately, then write to Supabase.
-5. Add `apps/api` once conflict handling becomes more complex.
+5. Subscribe to Supabase Realtime for faster refresh after changes from another
+   device.
+6. Add `apps/api` once conflict handling becomes more complex.
