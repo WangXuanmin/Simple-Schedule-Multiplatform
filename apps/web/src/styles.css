@@ -115,24 +115,43 @@ h1 {
   text-transform: uppercase;
 }
 
-.sync-pill {
-  min-width: 70px;
-  padding: 6px 10px;
+.refresh-button {
+  position: relative;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(49, 44, 36, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 253, 248, 0.82);
+}
+
+.refresh-button span::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border: 2px solid #a65035;
+  border-right-color: transparent;
   border-radius: 999px;
-  background: #f0c9b6;
-  color: #312c24;
-  font-size: 0.74rem;
-  text-align: center;
 }
 
-.sync-pill.is-syncing {
-  background: #f7dfad;
+.refresh-button span::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  border-top: 2px solid #a65035;
+  border-right: 2px solid #a65035;
+  transform: rotate(18deg);
 }
 
-.sync-pill.is-offline,
-.sync-pill.is-error {
-  background: #ead0ca;
-  color: #8b2f29;
+.refresh-button.is-syncing span {
+  opacity: 0.5;
+}
+
+.refresh-button:disabled {
+  cursor: default;
 }
 
 .segmented {

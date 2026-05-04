@@ -282,7 +282,16 @@ export function App() {
             <p className="eyebrow">{formatToday()}</p>
             <h1>Simple Schedule</h1>
           </div>
-          <div className={`sync-pill is-${syncState}`}>{syncLabel(syncState)}</div>
+          <button
+            className={`refresh-button ${syncState === "syncing" ? "is-syncing" : ""}`}
+            type="button"
+            aria-label="Refresh tasks"
+            title="Refresh"
+            disabled={syncState === "syncing"}
+            onClick={() => runSync()}
+          >
+            <span aria-hidden="true" />
+          </button>
         </header>
 
         <div className="segmented" role="tablist" aria-label="Task view">
@@ -366,13 +375,6 @@ export function App() {
       </section>
     </main>
   );
-}
-
-function syncLabel(state: SyncState) {
-  if (state === "syncing") return "Syncing";
-  if (state === "offline") return "Offline";
-  if (state === "error") return "Check";
-  return "Synced";
 }
 
 function formatToday() {

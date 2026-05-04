@@ -48,7 +48,8 @@ Required elements:
 - Todo task list
 - Add task button
 - Switch to Completed
-- Sync state indicator
+- Refresh button in the top-right header
+- Sync state text in the lower-left footer
 
 Task item:
 
@@ -188,7 +189,8 @@ Behavior:
 - If offline, changes stay queued.
 - When online again, queued changes sync automatically.
 - Add, complete, reopen, and delete actions automatically attempt cloud sync.
-- No primary manual sync button is shown in the task surface.
+- A compact top-right refresh button can manually trigger cloud sync.
+- Sync state is shown only in the lower-left footer, not as a top-right badge.
 - No sign-out button is shown in the main task surface because this is a
   personal single-user app.
 - The cloud database is the shared source of truth across devices.

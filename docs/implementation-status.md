@@ -20,7 +20,8 @@
   refresh so other devices update after task changes without manual refresh.
 - Added foreground and online-resume sync to reconcile changes missed while the
   app was backgrounded, sleeping, or offline.
-- Removed the visible manual sync button from the main task surface.
+- Replaced the top-right sync status badge with a compact manual refresh button.
+- Kept sync status text in the lower-left footer.
 - Removed the visible sign-out button from the main task surface for the
   personal single-user workflow.
 - Added deadline urgency colors: today or earlier uses red, and future
