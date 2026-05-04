@@ -1,0 +1,17 @@
+{
+  "name": "simple-schedule-multiplatform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Clean multi-platform restart of Simple-Schedule for Windows and iOS sync.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev -w @simple-schedule/web",
+    "build:web": "npm run build -w @simple-schedule/web",
+    "preview:web": "npm run preview -w @simple-schedule/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  }
+}

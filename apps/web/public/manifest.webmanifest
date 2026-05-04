@@ -1,0 +1,18 @@
+{
+  "name": "Simple Schedule",
+  "short_name": "Schedule",
+  "description": "A compact personal schedule PWA for Windows and iPhone.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#f4efe6",
+  "theme_color": "#f4efe6",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

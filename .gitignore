@@ -1,0 +1,8 @@
+node_modules/
+dist/
+build/
+.turbo/
+.env
+.env.local
+*.tsbuildinfo
+*.log
