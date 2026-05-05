@@ -26,6 +26,8 @@
 - Replaced the hand-written inline refresh paths with a dedicated public
   `icons/refresh.svg` asset for more consistent rendering across Windows and
   iPhone.
+- Replaced the refresh SVG asset with a 200x200 PNG asset to avoid iOS PWA
+  small-SVG rasterization differences.
 - Kept sync status text in the lower-left footer.
 - Removed the visible sign-out button from the main task surface for the
   personal single-user workflow.

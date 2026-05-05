@@ -290,7 +290,7 @@ export function App() {
             disabled={syncState === "syncing"}
             onClick={() => runSync()}
           >
-            <img src={`${import.meta.env.BASE_URL}icons/refresh.svg`} alt="" aria-hidden="true" />
+            <img src={`${import.meta.env.BASE_URL}icons/refresh.png`} alt="" aria-hidden="true" />
           </button>
         </header>
 
