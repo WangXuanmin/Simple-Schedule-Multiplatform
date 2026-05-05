@@ -127,11 +127,11 @@ h1 {
 }
 
 .refresh-button svg {
-  width: 21px;
-  height: 21px;
+  width: 19px;
+  height: 19px;
   fill: none;
   stroke: #a65035;
-  stroke-width: 2.3;
+  stroke-width: 2.1;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
