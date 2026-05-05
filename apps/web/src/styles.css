@@ -126,17 +126,13 @@ h1 {
   background: rgba(255, 253, 248, 0.82);
 }
 
-.refresh-button svg {
-  width: 19px;
-  height: 19px;
-  fill: none;
-  stroke: #a65035;
-  stroke-width: 2.1;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.refresh-button img {
+  width: 20px;
+  height: 20px;
+  display: block;
 }
 
-.refresh-button.is-syncing svg {
+.refresh-button.is-syncing img {
   opacity: 0.5;
 }
 
