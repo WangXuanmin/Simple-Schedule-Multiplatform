@@ -116,37 +116,27 @@ h1 {
 }
 
 .refresh-button {
-  position: relative;
   flex: 0 0 auto;
   width: 34px;
   height: 34px;
+  display: grid;
+  place-items: center;
   border: 1px solid rgba(49, 44, 36, 0.12);
   border-radius: 8px;
   background: rgba(255, 253, 248, 0.82);
 }
 
-.refresh-button span::before {
-  content: "";
-  position: absolute;
-  inset: 8px;
-  border: 2px solid #a65035;
-  border-right-color: transparent;
-  border-radius: 999px;
+.refresh-button svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: #a65035;
+  stroke-width: 2.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-.refresh-button span::after {
-  content: "";
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 7px;
-  height: 7px;
-  border-top: 2px solid #a65035;
-  border-right: 2px solid #a65035;
-  transform: rotate(18deg);
-}
-
-.refresh-button.is-syncing span {
+.refresh-button.is-syncing svg {
   opacity: 0.5;
 }
 

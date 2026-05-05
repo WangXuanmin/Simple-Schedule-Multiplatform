@@ -290,7 +290,10 @@ export function App() {
             disabled={syncState === "syncing"}
             onClick={() => runSync()}
           >
-            <span aria-hidden="true" />
+            <svg aria-hidden="true" viewBox="0 0 24 24">
+              <path d="M20 11a8 8 0 1 1-2.34-5.66" />
+              <path d="M20 4v7h-7" />
+            </svg>
           </button>
         </header>
 

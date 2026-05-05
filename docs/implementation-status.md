@@ -21,6 +21,8 @@
 - Added foreground and online-resume sync to reconcile changes missed while the
   app was backgrounded, sleeping, or offline.
 - Replaced the top-right sync status badge with a compact manual refresh button.
+- Updated the refresh button to use a stable SVG icon instead of CSS pseudo
+  elements.
 - Kept sync status text in the lower-left footer.
 - Removed the visible sign-out button from the main task surface for the
   personal single-user workflow.
