@@ -291,10 +291,10 @@ export function App() {
             onClick={() => runSync()}
           >
             <svg aria-hidden="true" viewBox="0 0 24 24">
-              <path d="M19 7.5a7.8 7.8 0 0 0-13.2-1.2L4 8.1" />
-              <path d="M4 4.3v3.8h3.8" />
-              <path d="M5 16.5a7.8 7.8 0 0 0 13.2 1.2L20 15.9" />
-              <path d="M20 19.7v-3.8h-3.8" />
+              <path d="M16.8 6.4A6.4 6.4 0 0 0 6.4 8.2" />
+              <path d="M16.8 3.9v2.5h-2.5" />
+              <path d="M7.2 17.6a6.4 6.4 0 0 0 10.4-1.8" />
+              <path d="M7.2 20.1v-2.5h2.5" />
             </svg>
           </button>
         </header>
