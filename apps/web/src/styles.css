@@ -127,10 +127,8 @@ h1 {
 }
 
 .refresh-button svg {
-  width: 18px;
-  height: 18px;
-  display: block;
-  overflow: visible;
+  width: 19px;
+  height: 19px;
   fill: none;
   stroke: #a65035;
   stroke-width: 2.1;
