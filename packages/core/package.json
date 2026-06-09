@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "src/index.ts"
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "node --test --experimental-strip-types src/*.test.ts"
+  }
 }
 

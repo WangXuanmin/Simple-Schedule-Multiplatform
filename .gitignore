@@ -1,6 +1,7 @@
 node_modules/
 dist/
 build/
+target/
 .turbo/
 .env
 .env.local
@@ -9,3 +10,4 @@ build/
 .DS_Store
 xcuserdata/
 *.xcuserstate
+apps/windows/src-tauri/gen/

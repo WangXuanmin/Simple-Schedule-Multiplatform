@@ -51,6 +51,10 @@ export function isExpiredCompletedTask(task: Task, now = new Date()): boolean {
   return now.getTime() - new Date(task.completedAt).getTime() >= COMPLETED_RETENTION_MS;
 }
 
+export function mergeTasks(...taskGroups: Task[][]): Task[] {
+  return taskGroups.flat().reduce<Task[]>((merged, task) => upsertTask(merged, task), []);
+}
+
 export function applyTaskOperation(tasks: Task[], operation: TaskOperation): Task[] {
   switch (operation.type) {
     case "task.create":
