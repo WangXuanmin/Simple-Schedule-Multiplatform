@@ -1,6 +1,7 @@
 # Architecture
 
-The current architecture direction is PWA-first.
+The current architecture uses a Windows PWA plus a native iOS client. Both
+clients sync through the same Supabase Auth user and `public.tasks` table.
 
 For the detailed product design, read:
 
@@ -13,14 +14,13 @@ For the technical architecture, read:
 The short version:
 
 ```text
-iPhone Home Screen PWA ----\
-                            -> Supabase Auth + Postgres
-Windows installed PWA ------/
+iOS SwiftUI app ----------\
+                           -> Supabase Auth + Postgres public.tasks
+Windows installed PWA -----/
 
-Both devices run apps/web.
-Shared task rules live in packages/core.
+apps/ios uses SwiftUI + SwiftData + Supabase REST.
+apps/web uses React + IndexedDB + Supabase JS.
 ```
 
-This project has only two app surfaces: `apps/web` for the installable PWA and
-`apps/api` as a reserved future sync service. The active implementation syncs
-directly from `apps/web` to Supabase.
+`apps/api` remains a reserved future sync service. The active implementations
+sync directly to Supabase and use local-first writes with retry queues.

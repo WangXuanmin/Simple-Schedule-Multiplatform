@@ -1,0 +1,392 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		BB0000000000000000000101 /* SimpleScheduleIOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000201 /* SimpleScheduleIOSApp.swift */; };
+		BB0000000000000000000102 /* TaskItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000202 /* TaskItem.swift */; };
+		BB0000000000000000000103 /* SupabaseConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000203 /* SupabaseConfig.swift */; };
+		BB0000000000000000000104 /* SupabaseClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000204 /* SupabaseClient.swift */; };
+		BB0000000000000000000105 /* TaskStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000205 /* TaskStore.swift */; };
+		BB0000000000000000000106 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000206 /* AuthView.swift */; };
+			BB0000000000000000000107 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000207 /* ContentView.swift */; };
+			BB0000000000000000000108 /* AddTaskView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000208 /* AddTaskView.swift */; };
+				BB0000000000000000000109 /* TaskRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000209 /* TaskRow.swift */; };
+				BB0000000000000000000110 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000210 /* Assets.xcassets */; };
+				BB0000000000000000000111 /* SessionStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000211 /* SessionStorage.swift */; };
+				BB0000000000000000000112 /* EditTaskView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000212 /* EditTaskView.swift */; };
+				BB0000000000000000000113 /* SimpleScheduleModelContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000213 /* SimpleScheduleModelContainer.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		BB0000000000000000000201 /* SimpleScheduleIOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleScheduleIOSApp.swift; sourceTree = "<group>"; };
+		BB0000000000000000000202 /* TaskItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskItem.swift; sourceTree = "<group>"; };
+		BB0000000000000000000203 /* SupabaseConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseConfig.swift; sourceTree = "<group>"; };
+		BB0000000000000000000204 /* SupabaseClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseClient.swift; sourceTree = "<group>"; };
+		BB0000000000000000000205 /* TaskStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskStore.swift; sourceTree = "<group>"; };
+		BB0000000000000000000206 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
+			BB0000000000000000000207 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+			BB0000000000000000000208 /* AddTaskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTaskView.swift; sourceTree = "<group>"; };
+				BB0000000000000000000209 /* TaskRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRow.swift; sourceTree = "<group>"; };
+				BB0000000000000000000210 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+				BB0000000000000000000211 /* SessionStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStorage.swift; sourceTree = "<group>"; };
+				BB0000000000000000000212 /* EditTaskView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditTaskView.swift; sourceTree = "<group>"; };
+				BB0000000000000000000213 /* SimpleScheduleModelContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleScheduleModelContainer.swift; sourceTree = "<group>"; };
+				BB0000000000000000000301 /* SimpleScheduleIOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SimpleScheduleIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		BB0000000000000000000401 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		BB0000000000000000000501 = {
+			isa = PBXGroup;
+			children = (
+				BB0000000000000000000502 /* SimpleScheduleIOS */,
+				BB0000000000000000000506 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		BB0000000000000000000502 /* SimpleScheduleIOS */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000000000000000000201 /* SimpleScheduleIOSApp.swift */,
+					BB0000000000000000000503 /* Models */,
+					BB0000000000000000000504 /* Services */,
+					BB0000000000000000000505 /* Views */,
+					BB0000000000000000000210 /* Assets.xcassets */,
+				);
+			path = SimpleScheduleIOS;
+			sourceTree = "<group>";
+		};
+		BB0000000000000000000503 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000000000000000000202 /* TaskItem.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		BB0000000000000000000504 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+					BB0000000000000000000203 /* SupabaseConfig.swift */,
+						BB0000000000000000000204 /* SupabaseClient.swift */,
+						BB0000000000000000000205 /* TaskStore.swift */,
+						BB0000000000000000000211 /* SessionStorage.swift */,
+						BB0000000000000000000213 /* SimpleScheduleModelContainer.swift */,
+					);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		BB0000000000000000000505 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000000000000000000206 /* AuthView.swift */,
+					BB0000000000000000000207 /* ContentView.swift */,
+					BB0000000000000000000208 /* AddTaskView.swift */,
+					BB0000000000000000000212 /* EditTaskView.swift */,
+					BB0000000000000000000209 /* TaskRow.swift */,
+				);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		BB0000000000000000000506 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				BB0000000000000000000301 /* SimpleScheduleIOS.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		BB0000000000000000000601 /* SimpleScheduleIOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BB0000000000000000000902 /* Build configuration list for PBXNativeTarget "SimpleScheduleIOS" */;
+			buildPhases = (
+				BB0000000000000000000701 /* Sources */,
+				BB0000000000000000000401 /* Frameworks */,
+				BB0000000000000000000702 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SimpleScheduleIOS;
+			productName = SimpleScheduleIOS;
+			productReference = BB0000000000000000000301 /* SimpleScheduleIOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		BB0000000000000000000801 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					BB0000000000000000000601 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = BB0000000000000000000901 /* Build configuration list for PBXProject "SimpleScheduleIOS" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = "zh-Hans";
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				"zh-Hans",
+				en,
+				Base,
+			);
+			mainGroup = BB0000000000000000000501;
+			productRefGroup = BB0000000000000000000506 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				BB0000000000000000000601 /* SimpleScheduleIOS */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		BB0000000000000000000702 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+				buildActionMask = 2147483647;
+				files = (
+					BB0000000000000000000110 /* Assets.xcassets in Resources */,
+				);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		BB0000000000000000000701 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BB0000000000000000000101 /* SimpleScheduleIOSApp.swift in Sources */,
+				BB0000000000000000000102 /* TaskItem.swift in Sources */,
+				BB0000000000000000000103 /* SupabaseConfig.swift in Sources */,
+					BB0000000000000000000104 /* SupabaseClient.swift in Sources */,
+						BB0000000000000000000105 /* TaskStore.swift in Sources */,
+						BB0000000000000000000111 /* SessionStorage.swift in Sources */,
+						BB0000000000000000000113 /* SimpleScheduleModelContainer.swift in Sources */,
+						BB0000000000000000000106 /* AuthView.swift in Sources */,
+					BB0000000000000000000107 /* ContentView.swift in Sources */,
+					BB0000000000000000000108 /* AddTaskView.swift in Sources */,
+					BB0000000000000000000112 /* EditTaskView.swift in Sources */,
+					BB0000000000000000000109 /* TaskRow.swift in Sources */,
+				);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		BB0000000000000000001001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		BB0000000000000000001002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		BB0000000000000000001003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+				buildSettings = {
+					ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+					CODE_SIGN_STYLE = Automatic;
+					CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 59L3SC9797;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Simple Schedule";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.wxm.SimpleScheduleIOS;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		BB0000000000000000001004 /* Release */ = {
+			isa = XCBuildConfiguration;
+				buildSettings = {
+					ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+					CODE_SIGN_STYLE = Automatic;
+					CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 59L3SC9797;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Simple Schedule";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.wxm.SimpleScheduleIOS;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		BB0000000000000000000901 /* Build configuration list for PBXProject "SimpleScheduleIOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB0000000000000000001001 /* Debug */,
+				BB0000000000000000001002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		BB0000000000000000000902 /* Build configuration list for PBXNativeTarget "SimpleScheduleIOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BB0000000000000000001003 /* Debug */,
+				BB0000000000000000001004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = BB0000000000000000000801 /* Project object */;
+}

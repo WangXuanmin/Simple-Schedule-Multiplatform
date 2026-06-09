@@ -1,8 +1,8 @@
 # Simple Schedule
 
-Simple Schedule is a personal task app for Windows and iPhone. It runs as a PWA,
-so it can be opened in a browser, installed on Windows, or added to the iPhone
-Home Screen from Safari.
+Simple Schedule is a personal task app for Windows and iPhone. Windows uses the
+installable PWA in `apps/web`; iPhone can use the native SwiftUI app in
+`apps/ios`, or the PWA from Safari.
 
 ## 功能介绍
 
@@ -11,7 +11,7 @@ Home Screen from Safari.
 - Todo 任务按截止时间排序。
 - 可完成、恢复和删除任务。
 - 已完成任务会在 5 天后自动隐藏。
-- 使用 Supabase 账号登录后，Windows 和 iPhone 之间自动同步任务。
+- 使用 Supabase 账号登录后，Windows PWA 和 iOS 原生 App 之间自动同步任务。
 - 支持 Supabase Realtime，同一账号的其他设备修改任务后会自动刷新。
 - 离线或同步失败时会先保存在本地，之后重新联网再同步。
 - 截止时间颜色提示：
@@ -37,6 +37,15 @@ https://wangxuanmin.github.io/Simple-Schedule-Multiplatform/
 4. 之后可从开始菜单、任务栏或桌面应用窗口打开。
 
 ### iPhone
+
+原生 iOS App：
+
+1. 用 Xcode 打开 `apps/ios/SimpleScheduleIOS.xcodeproj`。
+2. 选择 `SimpleScheduleIOS` target 和模拟器或真机。
+3. 如需真机运行，确认 Signing Team 已设置为你的 Apple 开发者账号。
+4. 运行后用和 Windows PWA 相同的 Supabase 账号登录。
+
+Safari PWA：
 
 1. 用 Safari 打开在线版本。
 2. 登录同一个 Supabase 账号。

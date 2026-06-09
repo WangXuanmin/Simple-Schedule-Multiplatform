@@ -1,6 +1,15 @@
 # Implementation Status
 
-## Completed
+## Native iOS app
+
+- Added `apps/ios/SimpleScheduleIOS.xcodeproj` for Xcode.
+- Added SwiftUI screens for Supabase login, task list, add task, complete/reopen,
+  soft-delete, refresh, and sync status.
+- Added SwiftData local storage for tasks and pending writes.
+- Added Supabase Auth REST and PostgREST task sync against the existing
+  `public.tasks` table used by the Windows PWA.
+
+## PWA completed
 
 - Created `apps/web` as a React + Vite PWA.
 - Added PWA manifest and app icon.
@@ -55,6 +64,11 @@
 ## Current Architecture
 
 ```text
+apps/ios
+  -> SwiftData local cache
+  -> Supabase Auth REST
+  -> Supabase PostgREST public.tasks
+
 apps/web
   -> IndexedDB local cache
   -> Supabase Auth

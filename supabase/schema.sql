@@ -5,6 +5,7 @@ create table if not exists public.tasks (
   deadline_at timestamptz not null,
   completed_at timestamptz,
   deleted_at timestamptz,
+  urgency text not null default 'normal' check (urgency in ('normal', 'rush', 'urgent')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

@@ -78,7 +78,9 @@ Required elements:
 - Delete action
 - Switch back to Todo
 
-Completed tasks older than 5 days are hidden by the app rule.
+Completed tasks remain visible for 7 days. Older completed tasks are hidden by
+the clients but retained in Supabase until the database purges them after 1
+month.
 
 ### Add Task
 

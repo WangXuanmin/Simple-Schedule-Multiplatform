@@ -1,5 +1,5 @@
-import type { Task } from "@simple-schedule/core";
-import { applyTaskOperation } from "@simple-schedule/core";
+import type { Task, TaskUrgency } from "@simple-schedule/core";
+import { applyTaskOperation, normalizeTaskUrgency } from "@simple-schedule/core";
 import type { User } from "@supabase/supabase-js";
 import {
   deletePendingTaskWrite,
@@ -19,6 +19,7 @@ type DbTask = {
   deadline_at: string;
   completed_at: string | null;
   deleted_at: string | null;
+  urgency?: TaskUrgency | string | null;
   created_at: string;
   updated_at: string;
 };
@@ -29,7 +30,8 @@ export type SyncResult = {
 };
 
 export async function loadCachedTasks(user: User): Promise<Task[]> {
-  return getLocalTasks(user.id);
+  const tasks = await getLocalTasks(user.id);
+  return tasks.map(normalizeTask);
 }
 
 export async function syncFromCloud(user: User): Promise<SyncResult> {
@@ -59,6 +61,7 @@ export async function createTask(user: User, title: string, deadlineAt: string, 
     deadlineAt,
     completedAt: null,
     deletedAt: null,
+    urgency: "normal",
     createdAt: now,
     updatedAt: now
   };
@@ -125,16 +128,17 @@ async function flushPendingWrites(user: User): Promise<void> {
 }
 
 function fromDbTask(task: DbTask): Task {
-  return {
+  return normalizeTask({
     id: task.id,
     userId: task.user_id,
     title: task.title,
     deadlineAt: task.deadline_at,
     completedAt: task.completed_at,
     deletedAt: task.deleted_at,
+    urgency: normalizeTaskUrgency(task.urgency),
     createdAt: task.created_at,
     updatedAt: task.updated_at
-  };
+  });
 }
 
 function toDbTask(task: Task): DbTask {
@@ -145,7 +149,15 @@ function toDbTask(task: Task): DbTask {
     deadline_at: task.deadlineAt,
     completed_at: task.completedAt,
     deleted_at: task.deletedAt,
+    urgency: normalizeTaskUrgency(task.urgency),
     created_at: task.createdAt,
     updated_at: task.updatedAt
+  };
+}
+
+function normalizeTask(task: Task): Task {
+  return {
+    ...task,
+    urgency: normalizeTaskUrgency(task.urgency)
   };
 }

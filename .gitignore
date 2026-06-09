@@ -6,3 +6,6 @@ build/
 .env.local
 *.tsbuildinfo
 *.log
+.DS_Store
+xcuserdata/
+*.xcuserstate

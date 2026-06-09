@@ -25,7 +25,9 @@ export type Task = {
 - Todo tasks have `completedAt === null` and `deletedAt === null`.
 - Completed tasks have `completedAt !== null` and `deletedAt === null`.
 - Deleted tasks are soft-deleted with `deletedAt !== null`.
-- Completed tasks older than 5 days can be hidden or purged.
+- Completed tasks are shown for 7 days, then hidden by the clients while still
+  retained in Supabase.
+- Supabase hard-deletes completed task rows after 1 month.
 
 ## Sort Rules
 

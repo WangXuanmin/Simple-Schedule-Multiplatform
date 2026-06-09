@@ -5,9 +5,16 @@ export type Task = {
   deadlineAt: string;
   completedAt: string | null;
   deletedAt: string | null;
+  urgency: TaskUrgency;
   createdAt: string;
   updatedAt: string;
 };
+
+export type TaskUrgency = "normal" | "rush" | "urgent";
+
+export function normalizeTaskUrgency(value: unknown): TaskUrgency {
+  return value === "rush" || value === "urgent" ? value : "normal";
+}
 
 export type TaskOperation =
   | { type: "task.create"; task: Task }
@@ -16,12 +23,17 @@ export type TaskOperation =
   | { type: "task.reopen"; taskId: string; updatedAt: string }
   | { type: "task.delete"; taskId: string; deletedAt: string; updatedAt: string };
 
-const COMPLETED_RETENTION_MS = 5 * 24 * 60 * 60 * 1000;
+export const COMPLETED_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function getTodoTasks(tasks: Task[]): Task[] {
   return tasks
     .filter((task) => !task.deletedAt && !task.completedAt)
-    .sort((a, b) => compareIso(a.deadlineAt, b.deadlineAt) || compareIso(a.createdAt, b.createdAt));
+    .sort(
+      (a, b) =>
+        compareIso(a.deadlineAt, b.deadlineAt) ||
+        urgencyRank(b.urgency) - urgencyRank(a.urgency) ||
+        compareIso(a.createdAt, b.createdAt)
+    );
 }
 
 export function getCompletedTasks(tasks: Task[]): Task[] {
@@ -31,11 +43,12 @@ export function getCompletedTasks(tasks: Task[]): Task[] {
 }
 
 export function hideExpiredCompletedTasks(tasks: Task[], now = new Date()): Task[] {
-  const nowMs = now.getTime();
-  return tasks.filter((task) => {
-    if (!task.completedAt) return true;
-    return nowMs - new Date(task.completedAt).getTime() < COMPLETED_RETENTION_MS;
-  });
+  return tasks.filter((task) => !isExpiredCompletedTask(task, now));
+}
+
+export function isExpiredCompletedTask(task: Task, now = new Date()): boolean {
+  if (!task.completedAt || task.deletedAt) return false;
+  return now.getTime() - new Date(task.completedAt).getTime() >= COMPLETED_RETENTION_MS;
 }
 
 export function applyTaskOperation(tasks: Task[], operation: TaskOperation): Task[] {
@@ -90,3 +103,13 @@ function compareIso(left: string | null, right: string | null): number {
   return new Date(left ?? 0).getTime() - new Date(right ?? 0).getTime();
 }
 
+function urgencyRank(value: TaskUrgency): number {
+  switch (normalizeTaskUrgency(value)) {
+    case "urgent":
+      return 2;
+    case "rush":
+      return 1;
+    case "normal":
+      return 0;
+  }
+}
