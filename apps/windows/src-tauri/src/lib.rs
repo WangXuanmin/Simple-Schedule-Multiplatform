@@ -51,6 +51,8 @@ pub fn run() {
     tauri::Builder::default()
         .manage(TopmostState::default())
         .plugin(tauri_plugin_autostart::Builder::new().app_name("Simple Schedule").build())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_notification::init())
         .plugin(
             tauri_plugin_window_state::Builder::default()
                 .with_state_flags(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED)

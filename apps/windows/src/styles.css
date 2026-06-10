@@ -138,6 +138,8 @@ p {
 .circle-button,
 .delete-button,
 .task-copy,
+.summary-metric,
+.filter-strip button,
 .urgency-form-button,
 .urgency-button {
   display: grid;
@@ -185,6 +187,12 @@ p {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.58);
+  text-align: left;
+}
+
+.summary-metric:hover {
+  border-color: rgba(47, 140, 99, 0.22);
+  background: rgba(255, 255, 255, 0.76);
 }
 
 .summary-icon {
@@ -213,7 +221,7 @@ p {
 
 .segmented {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 4px;
   margin: 0 16px 10px;
   padding: 4px;
@@ -233,6 +241,30 @@ p {
 .segmented button.is-active {
   background: var(--accent-warm);
   color: #ffffff;
+}
+
+.filter-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+  padding: 0 16px 8px;
+}
+
+.filter-strip button {
+  min-width: 0;
+  height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.48);
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.filter-strip button:hover,
+.filter-strip button.is-active {
+  border-color: rgba(47, 140, 99, 0.28);
+  background: rgba(47, 140, 99, 0.1);
+  color: var(--accent);
 }
 
 .add-task-button {
@@ -266,16 +298,18 @@ p {
   transform: translateY(0);
 }
 
-.quick-add {
+.bottom-composer {
   max-height: 0;
   padding: 0 16px;
   overflow: hidden;
-  transition: max-height 160ms ease;
+  transition:
+    max-height 160ms ease,
+    padding-bottom 160ms ease;
 }
 
-.quick-add.is-open {
+.bottom-composer.is-open {
   max-height: 132px;
-  padding-bottom: 10px;
+  padding-bottom: 8px;
 }
 
 .task-form {
@@ -295,7 +329,7 @@ p {
     transform 160ms ease;
 }
 
-.quick-add.is-open .task-form {
+.bottom-composer.is-open .task-form {
   opacity: 1;
   transform: translateY(0) scale(1);
 }

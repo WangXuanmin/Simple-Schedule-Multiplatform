@@ -8,8 +8,10 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { register, unregister } from "@tauri-apps/plugin-global-shortcut";
+import { isPermissionGranted, requestPermission, sendNotification } from "@tauri-apps/plugin-notification";
 import type { User } from "@supabase/supabase-js";
-import { type FormEvent, type MouseEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, type MouseEvent, type MutableRefObject, useEffect, useMemo, useRef, useState } from "react";
 import {
   createTask,
   deleteTask,
@@ -23,7 +25,8 @@ import {
 } from "../data/tasks";
 import { isSupabaseConfigured, supabase } from "../data/supabase";
 
-type View = "todo" | "completed";
+type View = "today" | "all" | "completed";
+type TaskFilter = "all" | "overdue" | "rush" | "urgent";
 type SyncState = "idle" | "syncing" | "offline" | "error";
 
 type Draft = {
@@ -37,6 +40,8 @@ type PendingDelete = {
   timerId: number;
 };
 
+const QUICK_CREATE_SHORTCUT = "CommandOrControl+Shift+A";
+
 const blankDraft = (): Draft => ({
   title: "",
   deadlineAt: toInputValue(addHours(new Date(), 1)),
@@ -48,7 +53,8 @@ export function App() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
-  const [view, setView] = useState<View>("todo");
+  const [view, setView] = useState<View>("today");
+  const [taskFilter, setTaskFilter] = useState<TaskFilter>("all");
   const [tasks, setTasks] = useState<Task[]>([]);
   const [draft, setDraft] = useState<Draft>(() => blankDraft());
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -62,11 +68,21 @@ export function App() {
   const [todayStartMs, setTodayStartMs] = useState(() => startOfDay(new Date()).getTime());
   const titleInputRef = useRef<HTMLInputElement>(null);
   const tasksRef = useRef<Task[]>([]);
+  const notifiedTaskKeysRef = useRef<Set<string>>(new Set());
+  const notificationPermissionRef = useRef<boolean | null>(null);
 
   const visibleTasks = useMemo(() => hideExpiredCompletedTasks(tasks), [tasks]);
   const todoTasks = useMemo(() => getTodoTasks(visibleTasks), [visibleTasks]);
+  const todayTasks = useMemo(
+    () => todoTasks.filter((task) => isDueOrOverdue(task, todayStartMs)),
+    [todoTasks, todayStartMs]
+  );
   const completedTasks = useMemo(() => getCompletedTasks(visibleTasks), [visibleTasks]);
-  const currentTasks = view === "todo" ? todoTasks : completedTasks;
+  const baseTasks = view === "today" ? todayTasks : view === "all" ? todoTasks : completedTasks;
+  const currentTasks = useMemo(
+    () => (view === "completed" ? baseTasks : applyTaskFilter(baseTasks, taskFilter, todayStartMs)),
+    [baseTasks, taskFilter, todayStartMs, view]
+  );
 
   const summary = useMemo(() => {
     const todo = tasks.filter((task) => !task.deletedAt && !task.completedAt);
@@ -139,6 +155,26 @@ export function App() {
   }, [user]);
 
   useEffect(() => {
+    let active = true;
+    register(QUICK_CREATE_SHORTCUT, () => {
+      void getCurrentWindow().show();
+      void getCurrentWindow().setFocus();
+      beginCreate();
+    })
+      .then(() => {
+        if (active) setMessage(`快捷键 ${shortcutLabel()} 可新建任务`);
+      })
+      .catch(() => {
+        if (active) setMessage("全局快捷键不可用");
+      });
+
+    return () => {
+      active = false;
+      unregister(QUICK_CREATE_SHORTCUT).catch(() => undefined);
+    };
+  }, []);
+
+  useEffect(() => {
     const online = () => {
       setSyncState("idle");
       runSync();
@@ -197,6 +233,16 @@ export function App() {
     }, 3000);
     return () => window.clearInterval(intervalId);
   }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    notifyDueTasks(todoTasks, notifiedTaskKeysRef, notificationPermissionRef).catch(() => undefined);
+    const intervalId = window.setInterval(() => {
+      notifyDueTasks(tasksRef.current.filter((task) => !task.deletedAt && !task.completedAt), notifiedTaskKeysRef, notificationPermissionRef)
+        .catch(() => undefined);
+    }, 60 * 1000);
+    return () => window.clearInterval(intervalId);
+  }, [todoTasks, user]);
 
   async function runSync(activeUser = user) {
     if (!activeUser) return;
@@ -350,7 +396,7 @@ export function App() {
   }
 
   function beginCreate() {
-    setView("todo");
+    setView("all");
     setEditingTask(null);
     setDraft(blankDraft());
     setIsAddOpen(true);
@@ -401,6 +447,11 @@ export function App() {
 
   function cycleDraftUrgency() {
     setDraft((current) => ({ ...current, urgency: nextUrgency(current.urgency) }));
+  }
+
+  function selectFilteredView(nextView: View, nextFilter: TaskFilter) {
+    setView(nextView);
+    setTaskFilter(nextFilter);
   }
 
   async function toggleTopmost() {
@@ -497,55 +548,39 @@ export function App() {
         </header>
 
         <div className="summary-strip" aria-label="Task summary">
-          <SummaryMetric icon="!" label="今日/逾期" value={summary.due} />
-          <SummaryMetric icon="!!" label="加急/紧急" value={summary.priority} />
-          <SummaryMetric icon="✓" label="最近完成" value={summary.completed} />
+          <SummaryMetric icon="!" label="今日/逾期" value={summary.due} onClick={() => selectFilteredView("today", "all")} />
+          <SummaryMetric icon="!!" label="加急/紧急" value={summary.priority} onClick={() => selectFilteredView("all", "rush")} />
+          <SummaryMetric icon="✓" label="最近完成" value={summary.completed} onClick={() => selectFilteredView("completed", "all")} />
         </div>
 
         <div className="segmented" role="tablist" aria-label="Task view">
-          <button className={view === "todo" ? "is-active" : ""} type="button" onClick={() => setView("todo")}>
-            待办
+          <button className={view === "today" ? "is-active" : ""} type="button" onClick={() => selectFilteredView("today", "all")}>
+            今日
           </button>
-          <button className={view === "completed" ? "is-active" : ""} type="button" onClick={() => setView("completed")}>
+          <button className={view === "all" ? "is-active" : ""} type="button" onClick={() => selectFilteredView("all", "all")}>
+            全部
+          </button>
+          <button className={view === "completed" ? "is-active" : ""} type="button" onClick={() => selectFilteredView("completed", "all")}>
             已完成
           </button>
         </div>
 
-        <div className={`quick-add ${isAddOpen || editingTask ? "is-open" : ""}`}>
-          {isAddOpen || editingTask ? (
-            <form className="task-form" onSubmit={submitTask}>
-              <input
-                ref={titleInputRef}
-                aria-label="Task title"
-                value={draft.title}
-                onChange={(event) => setDraft({ ...draft, title: event.target.value })}
-                placeholder={editingTask ? "编辑任务" : "新任务"}
-              />
-              <input
-                aria-label="Deadline"
-                type="datetime-local"
-                value={draft.deadlineAt}
-                onChange={(event) => setDraft({ ...draft, deadlineAt: event.target.value })}
-              />
-              <button
-                className={`urgency-form-button is-${draft.urgency}`}
-                type="button"
-                title={`紧急度：${urgencyTitle(draft.urgency)}`}
-                aria-label={`紧急度：${urgencyTitle(draft.urgency)}`}
-                onClick={cycleDraftUrgency}
-              >
-                <span>{urgencyIcon(draft.urgency)}</span>
-                {urgencyTitle(draft.urgency)}
-              </button>
-              <button className="submit-button" type="submit" title={editingTask ? "保存" : "添加"}>
-                {editingTask ? "保存" : "添加"}
-              </button>
-              <button className="cancel-button" type="button" title="取消" onClick={cancelForm}>
-                取消
-              </button>
-            </form>
-          ) : null}
-        </div>
+        {view !== "completed" ? (
+          <div className="filter-strip" aria-label="Task filters">
+            <FilterButton value="all" active={taskFilter === "all"} onClick={setTaskFilter}>
+              全部
+            </FilterButton>
+            <FilterButton value="overdue" active={taskFilter === "overdue"} onClick={setTaskFilter}>
+              逾期
+            </FilterButton>
+            <FilterButton value="rush" active={taskFilter === "rush"} onClick={setTaskFilter}>
+              加急
+            </FilterButton>
+            <FilterButton value="urgent" active={taskFilter === "urgent"} onClick={setTaskFilter}>
+              紧急
+            </FilterButton>
+          </div>
+        ) : null}
 
         <ol className="task-list">
           {currentTasks.length > 0 ? (
@@ -589,11 +624,47 @@ export function App() {
               </li>
             ))
           ) : (
-            <li className="empty-state">{view === "todo" ? "没有待办任务。" : "最近没有完成任务。"}</li>
+            <li className="empty-state">{emptyStateText(view, taskFilter)}</li>
           )}
         </ol>
 
-        {view === "todo" && !isAddOpen && !editingTask ? (
+        <div className={`bottom-composer ${isAddOpen || editingTask ? "is-open" : ""}`}>
+          {isAddOpen || editingTask ? (
+            <form className="task-form" onSubmit={submitTask}>
+              <input
+                ref={titleInputRef}
+                aria-label="Task title"
+                value={draft.title}
+                onChange={(event) => setDraft(parseDraftTitle({ ...draft, title: event.target.value }))}
+                placeholder={editingTask ? "编辑任务" : "新任务，例如 明天 9点 交报告"}
+              />
+              <input
+                aria-label="Deadline"
+                type="datetime-local"
+                value={draft.deadlineAt}
+                onChange={(event) => setDraft({ ...draft, deadlineAt: event.target.value })}
+              />
+              <button
+                className={`urgency-form-button is-${draft.urgency}`}
+                type="button"
+                title={`紧急度：${urgencyTitle(draft.urgency)}`}
+                aria-label={`紧急度：${urgencyTitle(draft.urgency)}`}
+                onClick={cycleDraftUrgency}
+              >
+                <span>{urgencyIcon(draft.urgency)}</span>
+                {urgencyTitle(draft.urgency)}
+              </button>
+              <button className="submit-button" type="submit" title={editingTask ? "保存" : "添加"}>
+                {editingTask ? "保存" : "添加"}
+              </button>
+              <button className="cancel-button" type="button" title="取消" onClick={cancelForm}>
+                取消
+              </button>
+            </form>
+          ) : null}
+        </div>
+
+        {view !== "completed" && !isAddOpen && !editingTask ? (
           <button className="add-task-button" type="button" title="添加任务" aria-label="添加任务" onClick={beginCreate}>
             <span>+</span>
           </button>
@@ -620,13 +691,31 @@ export function App() {
   );
 }
 
-function SummaryMetric({ icon, label, value }: { icon: string; label: string; value: number }) {
+function SummaryMetric({ icon, label, value, onClick }: { icon: string; label: string; value: number; onClick: () => void }) {
   return (
-    <div className="summary-metric">
+    <button className="summary-metric" type="button" onClick={onClick}>
       <span className="summary-icon">{icon}</span>
       <strong>{value}</strong>
       <span>{label}</span>
-    </div>
+    </button>
+  );
+}
+
+function FilterButton({
+  value,
+  active,
+  onClick,
+  children
+}: {
+  value: TaskFilter;
+  active: boolean;
+  onClick: (value: TaskFilter) => void;
+  children: string;
+}) {
+  return (
+    <button className={active ? "is-active" : ""} type="button" onClick={() => onClick(value)}>
+      {children}
+    </button>
   );
 }
 
@@ -642,6 +731,127 @@ function syncStatusText(syncState: SyncState, pendingWriteCount: number) {
     case "idle":
       return "已同步";
   }
+}
+
+function applyTaskFilter(tasks: Task[], filter: TaskFilter, todayStartMs: number) {
+  switch (filter) {
+    case "overdue":
+      return tasks.filter((task) => !task.completedAt && new Date(task.deadlineAt).getTime() < Date.now());
+    case "rush":
+      return tasks.filter((task) => task.urgency === "rush" || task.urgency === "urgent");
+    case "urgent":
+      return tasks.filter((task) => task.urgency === "urgent");
+    case "all":
+      return tasks;
+  }
+}
+
+function emptyStateText(view: View, filter: TaskFilter) {
+  if (view === "completed") return "最近没有完成任务。";
+  if (view === "today" && filter === "all") return "今天没有待办任务。";
+  if (filter === "overdue") return "没有逾期任务。";
+  if (filter === "rush") return "没有加急或紧急任务。";
+  if (filter === "urgent") return "没有紧急任务。";
+  return "没有待办任务。";
+}
+
+function parseDraftTitle(draft: Draft): Draft {
+  const parsed = inferDeadlineFromText(draft.title);
+  return parsed ? { ...draft, deadlineAt: toInputValue(parsed) } : draft;
+}
+
+function inferDeadlineFromText(text: string): Date | null {
+  const source = text.trim();
+  if (!source) return null;
+
+  const now = new Date();
+  let date: Date | null = null;
+
+  if (source.includes("今天")) date = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (source.includes("明天")) date = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  if (source.includes("后天")) date = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 2);
+
+  const nextWeekdayMatch = source.match(/下周([一二三四五六日天])/);
+  if (nextWeekdayMatch) {
+    const target = weekdayNumber(nextWeekdayMatch[1]);
+    const current = now.getDay() || 7;
+    const days = 7 - current + target;
+    date = new Date(now.getFullYear(), now.getMonth(), now.getDate() + days);
+  }
+
+  if (!date) return null;
+
+  const timeMatch = source.match(/(\d{1,2})(?::|：|点)(\d{1,2})?/);
+  const hours = timeMatch ? clampNumber(Number(timeMatch[1]), 0, 23) : 9;
+  const minutes = timeMatch?.[2] ? clampNumber(Number(timeMatch[2]), 0, 59) : 0;
+  date.setHours(hours, minutes, 0, 0);
+  return date;
+}
+
+function weekdayNumber(value: string) {
+  switch (value) {
+    case "一":
+      return 1;
+    case "二":
+      return 2;
+    case "三":
+      return 3;
+    case "四":
+      return 4;
+    case "五":
+      return 5;
+    case "六":
+      return 6;
+    case "日":
+    case "天":
+      return 7;
+    default:
+      return 1;
+  }
+}
+
+function clampNumber(value: number, min: number, max: number) {
+  if (Number.isNaN(value)) return min;
+  return Math.min(max, Math.max(min, value));
+}
+
+async function notifyDueTasks(
+  tasks: Task[],
+  notifiedTaskKeysRef: MutableRefObject<Set<string>>,
+  permissionRef: MutableRefObject<boolean | null>
+) {
+  const dueTasks = tasks.filter((task) => new Date(task.deadlineAt).getTime() <= Date.now());
+  if (dueTasks.length === 0) return;
+
+  if (permissionRef.current === null) {
+    let permissionGranted = await isPermissionGranted();
+    if (!permissionGranted) {
+      permissionGranted = (await requestPermission()) === "granted";
+    }
+    permissionRef.current = permissionGranted;
+  }
+
+  if (!permissionRef.current) return;
+
+  for (const task of dueTasks.slice(0, 3)) {
+    const key = `${task.id}:${task.deadlineAt}`;
+    if (notifiedTaskKeysRef.current.has(key)) continue;
+    notifiedTaskKeysRef.current.add(key);
+    sendNotification({
+      title: urgencyNotificationTitle(task),
+      body: `${task.title} · ${formatDeadline(task.deadlineAt, startOfDay(new Date()).getTime())}`
+    });
+  }
+}
+
+function urgencyNotificationTitle(task: Task) {
+  if (task.urgency === "urgent") return "紧急任务到期";
+  if (task.urgency === "rush") return "加急任务到期";
+  return "任务到期";
+}
+
+function shortcutLabel() {
+  return navigator.platform.toLowerCase().includes("mac") ? "Cmd+Shift+A" : "Ctrl+Shift+A";
 }
 
 function draftToInput(draft: Draft): TaskInput | null {
