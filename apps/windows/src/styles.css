@@ -84,12 +84,12 @@ button {
 }
 
 .titlebar {
-  min-height: 86px;
+  min-height: 46px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 18px 16px 8px;
+  padding: 10px 16px 6px;
 }
 
 .drag-region {
@@ -120,7 +120,7 @@ h2 {
 }
 
 p {
-  margin-top: 5px;
+  margin-top: 0;
   color: var(--muted);
   font-size: 0.76rem;
 }
@@ -139,7 +139,8 @@ p {
 .delete-button,
 .task-copy,
 .summary-metric,
-.filter-strip button,
+.filter-menu-button,
+.filter-menu button,
 .urgency-form-button,
 .urgency-button {
   display: grid;
@@ -243,15 +244,19 @@ p {
   color: #ffffff;
 }
 
-.filter-strip {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 5px;
-  padding: 0 16px 8px;
+.filter-bar {
+  min-height: 28px;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 16px 6px;
 }
 
-.filter-strip button {
-  min-width: 0;
+.filter-menu-wrap {
+  position: relative;
+}
+
+.filter-menu-button {
+  min-width: 58px;
   height: 26px;
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -260,9 +265,39 @@ p {
   font-size: 0.72rem;
 }
 
-.filter-strip button:hover,
-.filter-strip button.is-active {
+.filter-menu-button:hover,
+.filter-menu-button.is-active {
   border-color: rgba(47, 140, 99, 0.28);
+  background: rgba(47, 140, 99, 0.1);
+  color: var(--accent);
+}
+
+.filter-menu {
+  position: absolute;
+  right: 0;
+  top: 30px;
+  z-index: 6;
+  width: 92px;
+  display: grid;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 30px rgba(23, 27, 31, 0.14);
+}
+
+.filter-menu button {
+  height: 28px;
+  justify-content: start;
+  border-radius: 6px;
+  color: var(--text);
+  padding: 0 9px;
+  font-size: 0.76rem;
+}
+
+.filter-menu button:hover,
+.filter-menu button.is-active {
   background: rgba(47, 140, 99, 0.1);
   color: var(--accent);
 }
@@ -308,15 +343,18 @@ p {
 }
 
 .bottom-composer.is-open {
-  max-height: 132px;
+  max-height: 136px;
   padding-bottom: 8px;
+}
+
+.bottom-composer.is-open:not(.has-details) {
+  max-height: 58px;
 }
 
 .task-form {
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 132px 66px 52px 52px;
-  gap: 7px;
+  gap: 6px;
   padding: 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -327,6 +365,54 @@ p {
   transition:
     opacity 160ms ease,
     transform 160ms ease;
+}
+
+.composer-title-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.composer-details {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 66px 52px 52px;
+  gap: 7px;
+}
+
+.deadline-chip {
+  max-width: 92px;
+  overflow: hidden;
+  border: 1px solid rgba(47, 140, 99, 0.22);
+  border-radius: 999px;
+  background: rgba(47, 140, 99, 0.08);
+  color: var(--accent);
+  padding: 4px 8px;
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-detail-button,
+.composer-close-button {
+  height: 28px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  padding: 0 7px;
+  font-size: 0.72rem;
+}
+
+.composer-close-button {
+  width: 28px;
+  padding: 0;
+}
+
+.composer-detail-button:hover,
+.composer-close-button:hover {
+  background: rgba(36, 36, 36, 0.07);
+  color: var(--text);
 }
 
 .bottom-composer.is-open .task-form {
@@ -602,7 +688,7 @@ select:focus,
 .footer {
   min-height: 30px;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   gap: 8px;
   align-items: center;
   padding: 0 16px 6px;
@@ -661,17 +747,37 @@ select:focus,
   background: rgba(47, 140, 99, 0.16);
 }
 
+.notification-toggle {
+  height: 24px;
+  border: 1px solid rgba(47, 140, 99, 0.18);
+  border-radius: 999px;
+  background: rgba(47, 140, 99, 0.08);
+  color: var(--accent);
+  padding: 0 8px;
+  font-size: 0.72rem;
+}
+
+.notification-toggle.is-off {
+  border-color: var(--line);
+  background: rgba(255, 255, 255, 0.42);
+  color: var(--muted);
+}
+
+.notification-toggle:hover {
+  background: rgba(47, 140, 99, 0.14);
+}
+
 .status-line {
   color: var(--muted);
   font-size: 0.78rem;
 }
 
 @media (max-width: 420px) {
-  .task-form {
+  .composer-details {
     grid-template-columns: minmax(0, 1fr) 66px 52px 52px;
   }
 
-  .task-form input[type="datetime-local"] {
+  .composer-details input[type="datetime-local"] {
     grid-column: 1 / -1;
     order: 5;
   }
