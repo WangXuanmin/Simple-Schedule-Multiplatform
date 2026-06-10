@@ -54,6 +54,7 @@ button {
 
 .task-surface,
 .auth-panel {
+  position: relative;
   width: 100vw;
   height: 100vh;
   display: flex;
@@ -234,38 +235,35 @@ p {
   color: #ffffff;
 }
 
-.view-heading {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 0 16px 8px;
-}
-
 .add-task-button {
-  min-width: 76px;
-  height: 34px;
-  grid-auto-flow: column;
-  grid-auto-columns: max-content;
-  gap: 4px;
-  border: 1px solid rgba(47, 140, 99, 0.24);
-  border-radius: 8px;
-  background: rgba(47, 140, 99, 0.12);
-  color: var(--accent);
-  padding: 0 11px;
-  font-size: 0.82rem;
-  font-weight: 650;
-  white-space: nowrap;
+  position: absolute;
+  right: 18px;
+  bottom: 46px;
+  z-index: 4;
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(47, 140, 99, 0.34);
+  border-radius: 50%;
+  background: var(--accent);
+  color: #ffffff;
+  box-shadow: 0 12px 26px rgba(47, 140, 99, 0.28);
 }
 
 .add-task-button span {
-  font-size: 1.05rem;
+  font-size: 1.9rem;
+  font-weight: 400;
   line-height: 1;
+  transform: translateY(-1px);
 }
 
 .add-task-button:hover {
-  border-color: rgba(47, 140, 99, 0.36);
-  background: rgba(47, 140, 99, 0.18);
+  background: #267b56;
+  box-shadow: 0 14px 30px rgba(47, 140, 99, 0.34);
+  transform: translateY(-1px);
+}
+
+.add-task-button:active {
+  transform: translateY(0);
 }
 
 .quick-add {
@@ -393,7 +391,7 @@ select:focus,
   display: flex;
   flex-direction: column;
   margin: 0;
-  padding: 0 16px 10px;
+  padding: 0 16px 74px;
   overflow: hidden auto;
   list-style: none;
   overscroll-behavior: contain;

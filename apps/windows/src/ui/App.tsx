@@ -547,15 +547,6 @@ export function App() {
           ) : null}
         </div>
 
-        {view === "todo" && !isAddOpen && !editingTask ? (
-          <div className="view-heading" aria-label="任务操作">
-            <button className="add-task-button" type="button" title="添加任务" onClick={beginCreate}>
-              <span>＋</span>
-              新建
-            </button>
-          </div>
-        ) : null}
-
         <ol className="task-list">
           {currentTasks.length > 0 ? (
             currentTasks.map((task) => (
@@ -601,6 +592,12 @@ export function App() {
             <li className="empty-state">{view === "todo" ? "没有待办任务。" : "最近没有完成任务。"}</li>
           )}
         </ol>
+
+        {view === "todo" && !isAddOpen && !editingTask ? (
+          <button className="add-task-button" type="button" title="添加任务" aria-label="添加任务" onClick={beginCreate}>
+            <span>+</span>
+          </button>
+        ) : null}
 
         <footer className="footer">
           <button
