@@ -8,6 +8,11 @@
     "packages/*"
   ],
   "scripts": {
+    "test:supabase": "node scripts/test-supabase-sql.mjs",
+    "test:supabase:live": "node scripts/test-supabase-live.mjs",
+    "test:web": "node scripts/test-web.mjs",
+    "benchmark:merge": "node --experimental-strip-types scripts/benchmark-merge.mjs",
+    "check": "npm test && npm run typecheck && npm run build:web && npm run build -w @simple-schedule/windows",
     "dev:web": "npm run dev -w @simple-schedule/web",
     "build:web": "npm run build -w @simple-schedule/web",
     "preview:web": "npm run preview -w @simple-schedule/web",

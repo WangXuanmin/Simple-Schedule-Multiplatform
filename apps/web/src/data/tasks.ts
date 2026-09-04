@@ -1,32 +1,22 @@
-import type { Task, TaskUrgency } from "@simple-schedule/core";
-import { applyTaskOperation, normalizeTaskUrgency } from "@simple-schedule/core";
+import type { Task, TaskUrgency, PendingWrite, SyncConflict, WriteResult } from "@simple-schedule/core";
+import { createSyncScheduler, fromDbTask, toDbTask, pendingConflicts, uploadPendingWrites, normalizeTaskUrgency } from "@simple-schedule/core";
 import type { User } from "@supabase/supabase-js";
 import {
-  deletePendingTaskWrite,
   getLocalTasks,
   getPendingTaskWrites,
-  saveLocalTask,
+  saveTaskAndQueue,
   saveLocalTasks,
-  savePendingTaskWrite,
   setSyncMetadata
 } from "./localDb";
+import * as storage from "./localDb";
 import { supabase } from "./supabase";
-
-type DbTask = {
-  id: string;
-  user_id: string;
-  title: string;
-  deadline_at: string;
-  completed_at: string | null;
-  deleted_at: string | null;
-  urgency?: TaskUrgency | string | null;
-  created_at: string;
-  updated_at: string;
-};
 
 export type SyncResult = {
   tasks: Task[];
   syncedAt: string;
+  pendingWriteCount: number;
+  conflicts: SyncConflict[];
+  strictSync: boolean;
 };
 
 export async function loadCachedTasks(user: User): Promise<Task[]> {
@@ -34,25 +24,61 @@ export async function loadCachedTasks(user: User): Promise<Task[]> {
   return tasks.map(normalizeTask);
 }
 
-export async function syncFromCloud(user: User): Promise<SyncResult> {
-  await flushPendingWrites(user);
+export async function loadPendingWriteCount(user: User): Promise<number> {
+  return (await getPendingTaskWrites(user.id)).length;
+}
 
-  const { data, error } = await supabase
+const scheduleSync = createSyncScheduler(async (userId) => {
+  // IndexedDB is shared between tabs; the upload lock must be shared as well.
+  if (navigator.locks) return navigator.locks.request(`tasks-sync:${userId}`, () => performSync({ id: userId }));
+  return performSync({ id: userId });
+});
+
+export function syncFromCloud(user: User): Promise<SyncResult> {
+  return scheduleSync(user.id);
+}
+
+async function assertActiveAccount(userId: string): Promise<void> {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  if (data.session?.user.id !== userId) throw new Error("登录状态已改变，请重新同步");
+}
+
+async function performSync(user: Pick<User, "id">): Promise<SyncResult> {
+  await assertActiveAccount(user.id);
+  await uploadPendingWrites(user.id, storage, {
+    assertAccount: () => assertActiveAccount(user.id),
+    write: writeCloudTask,
+    read: async (taskId) => {
+      const { data, error, status } = await supabase.from("tasks").select("*").eq("id", taskId).eq("user_id", user.id)
+        .abortSignal(AbortSignal.timeout(15000)).maybeSingle();
+      if (error) throw Object.assign(error, { status });
+      return data ? fromDbTask(data) : null;
+    }
+  });
+
+  const { data, error, status } = await supabase
     .from("tasks")
     .select("*")
     .eq("user_id", user.id)
-    .order("updated_at", { ascending: true });
+    .order("updated_at", { ascending: true })
+    .abortSignal(AbortSignal.timeout(15000));
 
-  if (error) throw error;
+  if (error) throw Object.assign(error, { status });
 
-  const tasks = (data ?? []).map(fromDbTask);
+  await assertActiveAccount(user.id);
+  const cloudTasks = (data ?? []).map(fromDbTask);
+  const { data: capabilities, error: capabilityError } = await supabase.rpc("task_sync_capabilities_v1").abortSignal(AbortSignal.timeout(15000));
+  if (capabilityError) throw capabilityError;
+  const conflicts = pendingConflicts(await getPendingTaskWrites(user.id));
+  const strictSync = capabilities?.strict === true;
   const syncedAt = new Date().toISOString();
-  await saveLocalTasks(tasks);
-  await setSyncMetadata({ lastSyncAt: syncedAt });
-  return { tasks, syncedAt };
+  await saveLocalTasks(cloudTasks);
+  await setSyncMetadata(user.id, { lastSyncAt: syncedAt });
+  return { tasks: await getLocalTasks(user.id), syncedAt, conflicts, strictSync, pendingWriteCount: (await getPendingTaskWrites(user.id)).length };
 }
 
-export async function createTask(user: User, title: string, deadlineAt: string, currentTasks: Task[]): Promise<Task[]> {
+export async function createTask(user: User, title: string, deadlineAt: string): Promise<Task[]> {
   const now = new Date().toISOString();
   const task: Task = {
     id: crypto.randomUUID(),
@@ -63,101 +89,53 @@ export async function createTask(user: User, title: string, deadlineAt: string, 
     deletedAt: null,
     urgency: "normal",
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
+    version: 0
   };
 
-  await saveLocalTask(task);
-  await tryCloudWrite(task);
-  return applyTaskOperation(currentTasks, { type: "task.create", task });
+  await saveTaskAndQueue(task);
+  return getLocalTasks(user.id);
 }
 
-export async function toggleTask(user: User, task: Task, currentTasks: Task[]): Promise<Task[]> {
+export async function toggleTask(user: User, task: Task): Promise<Task[]> {
+  if (task.userId !== user.id) throw new Error("任务不属于当前账号");
   const updatedAt = new Date().toISOString();
   const nextTask = task.completedAt
     ? { ...task, completedAt: null, updatedAt }
     : { ...task, completedAt: updatedAt, updatedAt };
 
-  await saveLocalTask(nextTask);
-  await tryCloudWrite(nextTask, user.id);
-  return applyTaskOperation(currentTasks, task.completedAt
-    ? { type: "task.reopen", taskId: task.id, updatedAt }
-    : { type: "task.complete", taskId: task.id, completedAt: updatedAt, updatedAt });
+  await saveTaskAndQueue(nextTask);
+  return getLocalTasks(user.id);
 }
 
-export async function deleteTask(user: User, task: Task, currentTasks: Task[]): Promise<Task[]> {
+export async function deleteTask(user: User, task: Task): Promise<Task[]> {
+  if (task.userId !== user.id) throw new Error("任务不属于当前账号");
   const updatedAt = new Date().toISOString();
   const nextTask = { ...task, deletedAt: updatedAt, updatedAt };
-  await saveLocalTask(nextTask);
-  await tryCloudWrite(nextTask, user.id);
-  return applyTaskOperation(currentTasks, {
-    type: "task.delete",
-    taskId: task.id,
-    deletedAt: updatedAt,
-    updatedAt
-  });
+  await saveTaskAndQueue(nextTask);
+  return getLocalTasks(user.id);
 }
 
-async function upsertCloudTask(task: Task, userId = task.userId): Promise<void> {
-  const { error } = await supabase
-    .from("tasks")
-    .upsert(toDbTask({ ...task, userId }), { onConflict: "id" });
-
-  if (error) throw error;
+async function writeCloudTask(write: PendingWrite): Promise<WriteResult> {
+  const { data, error, status } = await supabase.rpc("write_task_v1", {
+    p_request_id: write.id, p_base_version: write.baseVersion, p_task: toDbTask(write.task)
+  }).abortSignal(AbortSignal.timeout(15000));
+  if (error) throw Object.assign(error, { status });
+  if (!data || !["applied", "duplicate", "conflict"].includes(data.status)) throw new Error("无效的同步响应");
+  if (data.status === "conflict") return { status: "conflict", task: data.task ? fromDbTask(data.task) : null };
+  if (!data.task) throw new Error("云端确认缺少任务");
+  return { status: data.status, task: fromDbTask(data.task) };
 }
 
-async function tryCloudWrite(task: Task, userId = task.userId): Promise<void> {
-  try {
-    await upsertCloudTask(task, userId);
-  } catch (error) {
-    await savePendingTaskWrite({
-      id: `${task.id}:${task.updatedAt}`,
-      task,
-      createdAt: new Date().toISOString(),
-      retryCount: 0,
-      lastError: error instanceof Error ? error.message : "Cloud write failed"
-    });
-  }
+export async function loadConflicts(user: User): Promise<SyncConflict[]> {
+  return pendingConflicts(await getPendingTaskWrites(user.id));
 }
 
-async function flushPendingWrites(user: User): Promise<void> {
-  const writes = await getPendingTaskWrites(user.id);
-  for (const write of writes) {
-    await upsertCloudTask(write.task, user.id);
-    await deletePendingTaskWrite(write.id);
-  }
-}
-
-function fromDbTask(task: DbTask): Task {
-  return normalizeTask({
-    id: task.id,
-    userId: task.user_id,
-    title: task.title,
-    deadlineAt: task.deadline_at,
-    completedAt: task.completed_at,
-    deletedAt: task.deleted_at,
-    urgency: normalizeTaskUrgency(task.urgency),
-    createdAt: task.created_at,
-    updatedAt: task.updated_at
-  });
-}
-
-function toDbTask(task: Task): DbTask {
-  return {
-    id: task.id,
-    user_id: task.userId,
-    title: task.title,
-    deadline_at: task.deadlineAt,
-    completed_at: task.completedAt,
-    deleted_at: task.deletedAt,
-    urgency: normalizeTaskUrgency(task.urgency),
-    created_at: task.createdAt,
-    updated_at: task.updatedAt
-  };
+export async function resolveConflict(user: User, requestId: string, copy: boolean): Promise<Task[]> {
+  await storage.resolvePendingConflict(user.id, requestId, copy);
+  return getLocalTasks(user.id);
 }
 
 function normalizeTask(task: Task): Task {
-  return {
-    ...task,
-    urgency: normalizeTaskUrgency(task.urgency)
-  };
+  return { ...task, urgency: normalizeTaskUrgency(task.urgency) };
 }

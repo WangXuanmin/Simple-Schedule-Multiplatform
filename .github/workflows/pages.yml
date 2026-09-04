@@ -24,14 +24,14 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Build
-        run: npm run build:web
+      - name: Validate and build
+        run: npm run check
         env:
           GITHUB_PAGES: "true"
           VITE_SUPABASE_URL: https://vzojfajfpjdjeoavhtks.supabase.co

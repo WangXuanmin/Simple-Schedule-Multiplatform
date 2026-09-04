@@ -1,5 +1,17 @@
 # HTTPS Deployment
 
+2026-09-04 update: the additive `supabase/migrations/20260904_sync_v1.sql` migration **was applied** to project `vzojfajfpjdjeoavhtks` and verified through real PostgreSQL/Auth/PostgREST tests. It preserves legacy writes. This change prepares the updated Web client for publication through the main-branch Pages workflow; Windows binaries remain local. `npm run check`, browser checks and the Windows native release build passed. Native desktop interaction acceptance and iOS/Xcode validation remain separate. Pages now requires `npm run check` to pass before deployment; inspect the commit's Actions run for its publication result.
+
+## Version protocol rollout
+
+1. For a fresh database, apply the base schema and additive version migration. For the current project, the additive migration is already applied.
+2. Publish the new Web/Windows clients and allow them to fetch cloud versions. Legacy offline writes lacking a baseline are retained and shown as conflicts, with cloud/copy choices.
+3. Keep compatibility while old clients need uploads. `task_sync_capabilities_v1()` currently returns `strict: false`; legacy iOS direct writes remain usable.
+4. Once legacy uploads can stop, apply `supabase/sync-v1-enforce.sql`. This revokes direct task writes and changes the existing retention function to soft deletion. This step is prepared, not executed. Do not run legacy `schema.sql`, `grants.sql` or `task-retention.sql` afterward without adapting them: they can undo strict grants/retention.
+5. Rerun live integration tests and verify capabilities report strict mode. Native clients and cross-device acceptance remain separate from server tests.
+
+`npm run test:supabase` runs transactional SQL checks with fixtures and temporary strict permissions rolled back. `npm run test:supabase:live` creates two isolated temporary Auth users, tests HTTP endpoints and deletes users/tasks/receipts in `finally`. Both require a signed-in dedicated Supabase dashboard tab, the web-access CDP proxy on localhost:3456, and explicit `SUPABASE_CDP_TARGET` / `SUPABASE_PROJECT_REF` environment variables. Tokens remain in the browser; neither test requires frontend service keys. These tests are manual, not part of CI. The query helper uses the official [Management API database query endpoint](https://supabase.com/docs/reference/api/v1-run-a-query).
+
 ## Target
 
 Deploy `apps/web` to GitHub Pages so it has an HTTPS URL and can be installed
@@ -38,8 +50,8 @@ The workflow lives at:
 
 It:
 
-1. Installs dependencies with `npm install`.
-2. Builds the PWA with `npm run build:web`.
+1. Installs locked dependencies with `npm ci` using Node 24.
+2. Runs tests, type checks and frontend builds with `npm run check`.
 3. Uploads `apps/web/dist`.
 4. Deploys to GitHub Pages.
 

@@ -1,7 +1,7 @@
-import { getCompletedTasks, getTodoTasks, hideExpiredCompletedTasks, type Task } from "@simple-schedule/core";
+import { getCompletedTasks, getTodoTasks, hideExpiredCompletedTasks, errorMessage, isRetryableSyncError, syncRetryDelay, type Task, type SyncConflict } from "@simple-schedule/core";
 import type { User } from "@supabase/supabase-js";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
-import { createTask, deleteTask, loadCachedTasks, syncFromCloud, toggleTask } from "../data/tasks";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { createTask, deleteTask, loadCachedTasks, loadPendingWriteCount, loadConflicts, resolveConflict, syncFromCloud, toggleTask } from "../data/tasks";
 import { isSupabaseConfigured, supabase } from "../data/supabase";
 
 type View = "todo" | "completed";
@@ -14,12 +14,22 @@ export function App() {
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const [view, setView] = useState<View>("todo");
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [conflicts, setConflicts] = useState<SyncConflict[]>([]);
+  const [strictSync, setStrictSync] = useState<boolean | null>(null);
+  const [pendingWriteCount, setPendingWriteCount] = useState(0);
   const [isAdding, setIsAdding] = useState(false);
   const [title, setTitle] = useState("");
   const [deadlineAt, setDeadlineAt] = useState(toInputValue(addHours(new Date(), 1)));
   const [syncState, setSyncState] = useState<SyncState>(navigator.onLine ? "idle" : "offline");
   const [message, setMessage] = useState("Ready");
   const [todayStartMs, setTodayStartMs] = useState(() => startOfDay(new Date()).getTime());
+
+  const activeUserRef = useRef<string | null>(null);
+  const syncRequestRef = useRef(0);
+  const localRevisionRef = useRef(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => () => { clearTimeout(retryTimerRef.current); syncRequestRef.current += 1; }, []);
 
   const visibleTasks = useMemo(() => hideExpiredCompletedTasks(tasks), [tasks]);
   const todoTasks = useMemo(() => getTodoTasks(visibleTasks), [visibleTasks]);
@@ -28,11 +38,11 @@ export function App() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
+      updateUser(data.session?.user ?? null);
     });
 
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      updateUser(session?.user ?? null);
     });
 
     return () => data.subscription.unsubscribe();
@@ -81,20 +91,27 @@ export function App() {
     }
 
     let cancelled = false;
+    void loadConflicts(user).then((items) => {
+      if (!cancelled) setConflicts(items);
+    }).catch((error) => { if (!cancelled) setMessage(errorMessage(error)); });
 
     loadCachedTasks(user).then((cached) => {
-      if (!cancelled) setTasks(cached);
-    });
-
-    runSync(user);
+      if (!cancelled) {
+        showTasks(cached);
+        void runSync(user);
+      }
+    }).catch((error) => { if (!cancelled) setMessage(errorMessage(error)); });
+    loadPendingWriteCount(user).then((count) => {
+      if (!cancelled) setPendingWriteCount(count);
+    }).catch((error) => { if (!cancelled) setMessage(errorMessage(error)); });
 
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
-    if (!user || !navigator.onLine) return;
+    if (!user) return;
 
     let syncTimerId: number | undefined;
     const syncSoon = () => {
@@ -122,7 +139,7 @@ export function App() {
       if (syncTimerId) window.clearTimeout(syncTimerId);
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user) return;
@@ -141,24 +158,85 @@ export function App() {
       window.removeEventListener("online", syncWhenOnline);
       document.removeEventListener("visibilitychange", syncWhenVisible);
     };
-  }, [user]);
+  }, [user?.id]);
 
-  async function runSync(activeUser = user) {
-    if (!activeUser || !navigator.onLine) {
+  function showTasks(nextTasks: Task[]) { setTasks(nextTasks); }
+
+  function updateUser(nextUser: User | null) {
+    if (activeUserRef.current !== (nextUser?.id ?? null)) {
+      activeUserRef.current = nextUser?.id ?? null;
+      syncRequestRef.current += 1;
+      localRevisionRef.current += 1;
+      clearTimeout(retryTimerRef.current);
+      setTasks([]);
+      setConflicts([]);
+      setStrictSync(null);
+      setPendingWriteCount(0);
+      setMessage("等待同步");
+    }
+    setUser(nextUser);
+  }
+
+  async function runSync(activeUser = user, attempt = 0) {
+    if (!activeUser || activeUserRef.current !== activeUser.id) return;
+    clearTimeout(retryTimerRef.current);
+    const request = ++syncRequestRef.current;
+    const isCurrent = () => activeUserRef.current === activeUser.id && syncRequestRef.current === request;
+    if (!navigator.onLine) {
       setSyncState("offline");
-      setMessage("Offline. Local cache is available.");
+      setMessage("当前离线，本地修改已排队，联网后同步");
       return;
     }
-
     try {
       setSyncState("syncing");
       const result = await syncFromCloud(activeUser);
-      setTasks(result.tasks);
-      setSyncState("idle");
-      setMessage(`Synced ${formatSyncTime(result.syncedAt)}`);
+      const revision = localRevisionRef.current;
+      const [cached, count] = await Promise.all([loadCachedTasks(activeUser), loadPendingWriteCount(activeUser)]);
+      if (!isCurrent()) return;
+      if (revision === localRevisionRef.current) showTasks(cached);
+      setPendingWriteCount(count);
+      setConflicts(result.conflicts);
+      setStrictSync(result.strictSync);
+      setSyncState(result.conflicts.length ? "error" : "idle");
+      setMessage(result.conflicts.length ? `${result.conflicts.length} 个任务存在冲突，请选择处理方式` : count ? `${count} 条修改已保存到本机，待同步` : `已同步 ${new Date(result.syncedAt).toLocaleTimeString()}`);
     } catch (error) {
+      if (!isCurrent()) return;
       setSyncState("error");
-      setMessage(error instanceof Error ? error.message : "Sync failed");
+      setMessage(errorMessage(error));
+      const delay = isRetryableSyncError(error) ? syncRetryDelay(attempt) : null;
+      if (delay !== null) {
+        retryTimerRef.current = setTimeout(() => {
+          if (isCurrent()) void runSync(activeUser, attempt + 1);
+        }, delay);
+      }
+    }
+  }
+
+  function localSaveCompleted(activeUser: User, nextTasks: Task[]) {
+    if (activeUserRef.current !== activeUser.id) return;
+    localRevisionRef.current += 1;
+    showTasks(nextTasks);
+    setMessage("已保存到本机，待同步");
+    const revision = localRevisionRef.current;
+    void loadPendingWriteCount(activeUser).then((count) => {
+      if (activeUserRef.current === activeUser.id && revision === localRevisionRef.current) setPendingWriteCount(count);
+    }).catch((error) => {
+      if (activeUserRef.current === activeUser.id) setMessage(errorMessage(error));
+    });
+    void runSync(activeUser);
+  }
+
+  async function resolveTaskConflict(conflict: SyncConflict, copy: boolean) {
+    if (!user) return;
+    try {
+      const nextTasks = await resolveConflict(user, conflict.requestId, copy);
+      if (activeUserRef.current !== user.id) return;
+      const nextConflicts = await loadConflicts(user);
+      if (activeUserRef.current !== user.id) return;
+      setConflicts(nextConflicts);
+      localSaveCompleted(user, nextTasks);
+    } catch (error) {
+      if (activeUserRef.current === user.id) setMessage(errorMessage(error));
     }
   }
 
@@ -195,12 +273,12 @@ export function App() {
     if (!user || !title.trim() || !deadlineAt) return;
 
     try {
-      const nextTasks = await createTask(user, title.trim(), new Date(deadlineAt).toISOString(), tasks);
-      setTasks(nextTasks);
+      const nextTasks = await createTask(user, title.trim(), new Date(deadlineAt).toISOString());
+      if (activeUserRef.current !== user.id) return;
+      localSaveCompleted(user, nextTasks);
       setTitle("");
       setDeadlineAt(toInputValue(addHours(new Date(), 1)));
       setIsAdding(false);
-      setMessage("Task saved");
     } catch (error) {
       setSyncState("error");
       setMessage(error instanceof Error ? error.message : "Could not save task");
@@ -209,16 +287,20 @@ export function App() {
 
   async function toggle(task: Task) {
     if (!user) return;
-    const nextTasks = await toggleTask(user, task, tasks);
-    setTasks(nextTasks);
-    setMessage(task.completedAt ? "Task reopened" : "Task completed");
+    try {
+      localSaveCompleted(user, await toggleTask(user, task));
+    } catch (error) {
+      if (activeUserRef.current === user.id) setMessage(`本地保存失败：${errorMessage(error)}`);
+    }
   }
 
   async function remove(task: Task) {
     if (!user) return;
-    const nextTasks = await deleteTask(user, task, tasks);
-    setTasks(nextTasks);
-    setMessage("Task deleted");
+    try {
+      localSaveCompleted(user, await deleteTask(user, task));
+    } catch (error) {
+      if (activeUserRef.current === user.id) setMessage(`本地保存失败：${errorMessage(error)}`);
+    }
   }
 
   if (!isSupabaseConfigured) {
@@ -371,7 +453,22 @@ export function App() {
           </button>
         </div>
 
-        <footer className="status-line">{message}</footer>
+        {strictSync === false ? <p className="sync-compatibility" role="status">当前兼容旧版客户端，完整冲突保护尚未启用。</p> : null}
+        {conflicts.length > 0 ? (
+          <section className="sync-conflicts" aria-label="同步冲突">
+            {conflicts.map((conflict) => (
+              <div key={conflict.requestId}>
+                <strong>{conflict.local.title}</strong>
+                <p>{conflict.reason}</p>
+                <p>云端：{conflict.remote ? (conflict.remote.deletedAt ? "已删除" : conflict.remote.title) : "任务不存在"}</p>
+                <button type="button" onClick={() => resolveTaskConflict(conflict, false)}>采用云端（放弃本地修改）</button>
+                <button type="button" onClick={() => resolveTaskConflict(conflict, true)}>保留本地为新任务</button>
+              </div>
+            ))}
+          </section>
+        ) : null}
+
+        <footer className="status-line" role="status">{message}{pendingWriteCount > 0 ? ` · ${pendingWriteCount} 待同步` : ""}</footer>
       </section>
     </main>
   );
@@ -425,14 +522,6 @@ function formatCompleted(value: string, todayStartMs: number) {
     month: "short",
     day: "numeric"
   }).format(date);
-}
-
-function formatSyncTime(value: string) {
-  return new Intl.DateTimeFormat("zh-CN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false
-  }).format(new Date(value));
 }
 
 function toInputValue(date: Date) {

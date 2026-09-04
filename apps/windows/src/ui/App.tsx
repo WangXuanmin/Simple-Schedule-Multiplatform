@@ -1,8 +1,12 @@
 import {
+  errorMessage,
+  isRetryableSyncError,
+  syncRetryDelay,
   getCompletedTasks,
   getTodoTasks,
   hideExpiredCompletedTasks,
   type Task,
+  type SyncConflict,
   type TaskUrgency
 } from "@simple-schedule/core";
 import { invoke } from "@tauri-apps/api/core";
@@ -25,6 +29,8 @@ import {
   createTask,
   deleteTask,
   loadCachedTasks,
+  loadConflicts,
+  resolveConflict,
   loadPendingTaskIds,
   loadPendingWriteCount,
   syncFromCloud,
@@ -72,6 +78,8 @@ export function App() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [syncState, setSyncState] = useState<SyncState>(navigator.onLine ? "idle" : "offline");
   const [message, setMessage] = useState("就绪");
+  const [conflicts, setConflicts] = useState<SyncConflict[]>([]);
+  const [strictSync, setStrictSync] = useState<boolean | null>(null);
   const [pendingWriteCount, setPendingWriteCount] = useState(0);
   const [pendingTaskIds, setPendingTaskIds] = useState<string[]>([]);
   const [alwaysOnTop, setAlwaysOnTop] = useState(false);
@@ -82,6 +90,13 @@ export function App() {
   const tasksRef = useRef<Task[]>([]);
   const notifiedTaskKeysRef = useRef<Set<string>>(new Set());
   const notificationPermissionRef = useRef<boolean | null>(null);
+
+  const activeUserRef = useRef<string | null>(null);
+  const syncRequestRef = useRef(0);
+  const localRevisionRef = useRef(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => () => { clearTimeout(retryTimerRef.current); syncRequestRef.current += 1; }, []);
 
   const visibleTasks = useMemo(() => hideExpiredCompletedTasks(tasks), [tasks]);
   const todoTasks = useMemo(() => getTodoTasks(visibleTasks), [visibleTasks]);
@@ -121,11 +136,11 @@ export function App() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
+      updateUser(data.session?.user ?? null);
     });
 
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      updateUser(session?.user ?? null);
     });
 
     return () => data.subscription.unsubscribe();
@@ -167,7 +182,7 @@ export function App() {
       unlistenNewTask?.();
       unlistenAutostart?.();
     };
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     let active = true;
@@ -201,7 +216,7 @@ export function App() {
       window.removeEventListener("online", online);
       window.removeEventListener("offline", offline);
     };
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     const refreshToday = () => setTodayStartMs(startOfDay(new Date()).getTime());
@@ -218,27 +233,34 @@ export function App() {
   useEffect(() => {
     if (!user) {
       setTasks([]);
+      setConflicts([]);
+      setStrictSync(null);
       setPendingWriteCount(0);
       setPendingTaskIds([]);
       return;
     }
 
     let cancelled = false;
+    void loadConflicts(user).then((items) => {
+      if (!cancelled) setConflicts(items);
+    }).catch((error) => { if (!cancelled) setMessage(errorMessage(error)); });
     loadCachedTasks(user).then((cached) => {
-      if (!cancelled) setTasks(cached);
-    });
+      if (!cancelled) {
+        showTasks(cached);
+        void runSync(user);
+      }
+    }).catch((error) => { if (!cancelled) setMessage(errorMessage(error)); });
     loadPendingWriteCount(user).then((count) => {
       if (!cancelled) setPendingWriteCount(count);
-    });
+    }).catch((error) => { if (!cancelled) setMessage(errorMessage(error)); });
     loadPendingTaskIds(user).then((ids) => {
       if (!cancelled) setPendingTaskIds(ids);
-    });
-    runSync(user);
+    }).catch((error) => { if (!cancelled) setMessage(errorMessage(error)); });
 
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user) return;
@@ -247,7 +269,7 @@ export function App() {
         .catch(() => undefined);
     }, 3000);
     return () => window.clearInterval(intervalId);
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user || !notificationsEnabled) return;
@@ -259,27 +281,91 @@ export function App() {
     return () => window.clearInterval(intervalId);
   }, [notificationsEnabled, todoTasks, user]);
 
-  async function runSync(activeUser = user) {
-    if (!activeUser) return;
+  const pendingDeleteRef = useRef(pendingDelete);
+  pendingDeleteRef.current = pendingDelete;
+
+  function showTasks(nextTasks: Task[]) {
+    const hidden = pendingDeleteRef.current?.task;
+    setTasks(nextTasks.map((task) => task.id === hidden?.id ? { ...task, deletedAt: hidden.deletedAt ?? task.updatedAt } : task));
+  }
+
+  function updateUser(nextUser: User | null) {
+    if (activeUserRef.current !== (nextUser?.id ?? null)) {
+      activeUserRef.current = nextUser?.id ?? null;
+      syncRequestRef.current += 1;
+      localRevisionRef.current += 1;
+      clearTimeout(retryTimerRef.current);
+      setTasks([]);
+      setConflicts([]);
+      setStrictSync(null);
+      setPendingWriteCount(0);
+      setPendingTaskIds([]);
+      if (pendingDeleteRef.current) clearTimeout(pendingDeleteRef.current.timerId);
+      pendingDeleteRef.current = null;
+      setPendingDelete(null);
+    }
+    setUser(nextUser);
+  }
+
+  useEffect(() => {
+    const foreground = () => {
+      if (document.visibilityState === "visible") void runSync(user);
+    };
+    window.addEventListener("focus", foreground);
+    document.addEventListener("visibilitychange", foreground);
+    return () => {
+      window.removeEventListener("focus", foreground);
+      document.removeEventListener("visibilitychange", foreground);
+    };
+  }, [user?.id]);
+
+  async function runSync(activeUser = user, attempt = 0) {
+    if (!activeUser || activeUserRef.current !== activeUser.id) return;
+    clearTimeout(retryTimerRef.current);
+    const request = ++syncRequestRef.current;
+    const isCurrent = () => activeUserRef.current === activeUser.id && syncRequestRef.current === request;
     if (!navigator.onLine) {
       setSyncState("offline");
-      setMessage("当前离线，本地修改会排队同步");
+      setMessage("当前离线，本地修改已排队，联网后同步");
       return;
     }
-
     try {
       setSyncState("syncing");
       const result = await syncFromCloud(activeUser);
-      setTasks(result.tasks);
-      setPendingWriteCount(result.pendingWriteCount);
-      setPendingTaskIds(await loadPendingTaskIds(activeUser));
-      setSyncState("idle");
-      setMessage(`已同步 ${formatTime(result.syncedAt)}`);
+      const revision = localRevisionRef.current;
+      const [cached, count] = await Promise.all([loadCachedTasks(activeUser), loadPendingWriteCount(activeUser)]);
+      if (!isCurrent()) return;
+      if (revision === localRevisionRef.current) showTasks(cached);
+      setPendingWriteCount(count);
+      setConflicts(result.conflicts);
+      setStrictSync(result.strictSync);
+      setSyncState(result.conflicts.length ? "error" : "idle");
+      setMessage(result.conflicts.length ? `${result.conflicts.length} 个任务存在冲突，请选择处理方式` : count ? `${count} 条修改已保存到本机，待同步` : `已同步 ${new Date(result.syncedAt).toLocaleTimeString()}`);
     } catch (error) {
+      if (!isCurrent()) return;
       setSyncState("error");
-      setPendingWriteCount(await loadPendingWriteCount(activeUser));
-      setMessage(error instanceof Error ? error.message : "同步失败");
+      setMessage(errorMessage(error));
+      const delay = isRetryableSyncError(error) ? syncRetryDelay(attempt) : null;
+      if (delay !== null) {
+        retryTimerRef.current = setTimeout(() => {
+          if (isCurrent()) void runSync(activeUser, attempt + 1);
+        }, delay);
+      }
     }
+  }
+
+  function localSaveCompleted(activeUser: User, nextTasks: Task[]) {
+    if (activeUserRef.current !== activeUser.id) return;
+    localRevisionRef.current += 1;
+    showTasks(nextTasks);
+    setMessage("已保存到本机，待同步");
+    const revision = localRevisionRef.current;
+    void loadPendingWriteCount(activeUser).then((count) => {
+      if (activeUserRef.current === activeUser.id && revision === localRevisionRef.current) setPendingWriteCount(count);
+    }).catch((error) => {
+      if (activeUserRef.current === activeUser.id) setMessage(errorMessage(error));
+    });
+    void runSync(activeUser);
   }
 
   function refreshPendingCountSoon(activeUser = user) {
@@ -296,8 +382,23 @@ export function App() {
   async function refreshPendingState(activeUser = user) {
     if (!activeUser) return;
     const [count, ids] = await Promise.all([loadPendingWriteCount(activeUser), loadPendingTaskIds(activeUser)]);
+    if (activeUserRef.current !== activeUser.id) return;
     setPendingWriteCount(count);
     setPendingTaskIds(ids);
+  }
+
+  async function resolveTaskConflict(conflict: SyncConflict, copy: boolean) {
+    if (!user) return;
+    try {
+      const nextTasks = await resolveConflict(user, conflict.requestId, copy);
+      if (activeUserRef.current !== user.id) return;
+      const nextConflicts = await loadConflicts(user);
+      if (activeUserRef.current !== user.id) return;
+      setConflicts(nextConflicts);
+      localSaveCompleted(user, nextTasks);
+    } catch (error) {
+      if (activeUserRef.current === user.id) setMessage(errorMessage(error));
+    }
   }
 
   async function submitAuth(event: FormEvent<HTMLFormElement>) {
@@ -333,16 +434,17 @@ export function App() {
 
     try {
       const nextTasks = editingTask
-        ? await updateTask(user, editingTask, input, tasks)
-        : await createTask(user, input, tasks);
-      setTasks(nextTasks);
+        ? await updateTask(user, editingTask, input)
+        : await createTask(user, input);
+      if (activeUserRef.current !== user.id) return;
+      localSaveCompleted(user, nextTasks);
       refreshPendingCountSoon(user);
       setDraft(blankDraft());
       setIsAddOpen(false);
       setIsComposerExpanded(false);
       setEditingTask(null);
-      setMessage(editingTask ? "任务已更新" : "任务已保存");
     } catch (error) {
+      if (activeUserRef.current !== user?.id) return;
       setSyncState("error");
       setMessage(error instanceof Error ? error.message : "任务保存失败");
     }
@@ -351,11 +453,12 @@ export function App() {
   async function toggle(task: Task) {
     if (!user) return;
     try {
-      const nextTasks = await toggleTask(user, task, tasks);
-      setTasks(nextTasks);
+      const nextTasks = await toggleTask(user, task);
+      if (activeUserRef.current !== user.id) return;
+      localSaveCompleted(user, nextTasks);
       refreshPendingCountSoon(user);
-      setMessage(task.completedAt ? "任务已恢复" : "任务已完成");
     } catch (error) {
+      if (activeUserRef.current !== user?.id) return;
       setSyncState("error");
       setMessage(error instanceof Error ? error.message : "任务状态更新失败");
     }
@@ -376,38 +479,55 @@ export function App() {
     );
 
     const timerId = window.setTimeout(() => {
+      if (pendingDeleteRef.current?.task.id === task.id) pendingDeleteRef.current = null;
       setPendingDelete((current) => (current?.task.id === task.id ? null : current));
       void commitDelete(task);
     }, 5000);
 
+    pendingDeleteRef.current = { task, timerId };
     setPendingDelete({ task, timerId });
-    setMessage("任务已删除，5 秒内可撤销");
+    setMessage("删除将在 5 秒后保存，可撤销");
   }
 
   async function commitDelete(task: Task) {
-    if (!user) return;
+    if (!user || activeUserRef.current !== user.id) return;
     try {
-      const nextTasks = await deleteTask(user, task, tasksRef.current);
-      setTasks(nextTasks);
+      const nextTasks = await deleteTask(user, task);
+      if (activeUserRef.current !== user.id) return;
+      localSaveCompleted(user, nextTasks);
       refreshPendingCountSoon(user);
-      setMessage("任务已删除");
     } catch (error) {
+      if (activeUserRef.current !== user?.id) return;
       setSyncState("error");
-      setMessage(error instanceof Error ? error.message : "任务删除失败");
+      try {
+        const cached = await loadCachedTasks(user);
+        if (activeUserRef.current !== user.id) return;
+        showTasks(cached);
+      } catch {
+        if (activeUserRef.current !== user.id) return;
+        setTasks((current) => current.map((item) => item.id === task.id ? task : item));
+      }
+      setMessage(errorMessage(error));
     }
   }
 
   function undoDelete() {
-    if (!pendingDelete) return;
+    if (!pendingDelete || !user) return;
     window.clearTimeout(pendingDelete.timerId);
     setTasks((current) =>
       current.map((task) =>
         task.id === pendingDelete.task.id
-          ? { ...pendingDelete.task, deletedAt: null, updatedAt: new Date().toISOString() }
+          ? pendingDelete.task
           : task
       )
     );
+    pendingDeleteRef.current = null;
     setPendingDelete(null);
+    void loadCachedTasks(user).then((cached) => {
+      if (activeUserRef.current === user.id) showTasks(cached);
+    }).catch((error) => {
+      if (activeUserRef.current === user.id) setMessage(errorMessage(error));
+    });
     setMessage("已撤销删除");
   }
 
@@ -447,12 +567,11 @@ export function App() {
           title: task.title,
           deadlineAt: task.deadlineAt,
           urgency
-        },
-        tasks
+        }
       );
-      setTasks(nextTasks);
+      if (activeUserRef.current !== user.id) return;
+      localSaveCompleted(user, nextTasks);
       refreshPendingCountSoon(user);
-      setMessage("紧急度已更新");
     } catch (error) {
       setSyncState("error");
       setMessage(error instanceof Error ? error.message : "紧急度更新失败");
@@ -744,6 +863,21 @@ export function App() {
           <button className="add-task-button" type="button" title="添加任务" aria-label="添加任务" onClick={beginCreate}>
             <span>+</span>
           </button>
+        ) : null}
+
+        {strictSync === false ? <p className="sync-compatibility" role="status">当前兼容旧版客户端，完整冲突保护尚未启用。</p> : null}
+        {conflicts.length > 0 ? (
+          <section className="sync-conflicts" aria-label="同步冲突">
+            {conflicts.map((conflict) => (
+              <div key={conflict.requestId}>
+                <strong>{conflict.local.title}</strong>
+                <p>{conflict.reason}</p>
+                <p>云端：{conflict.remote ? (conflict.remote.deletedAt ? "已删除" : conflict.remote.title) : "任务不存在"}</p>
+                <button type="button" onClick={() => resolveTaskConflict(conflict, false)}>采用云端（放弃本地修改）</button>
+                <button type="button" onClick={() => resolveTaskConflict(conflict, true)}>保留本地为新任务</button>
+              </div>
+            ))}
+          </section>
         ) : null}
 
         <footer className="footer">

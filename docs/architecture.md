@@ -1,26 +1,17 @@
 # Architecture
 
-The current architecture uses a Windows PWA plus a native iOS client. Both
-clients sync through the same Supabase Auth user and `public.tasks` table.
+Updated 2026-09-04. Three clients share Supabase Auth and `public.tasks`:
 
-For the detailed product design, read:
+| Client | UI | Local persistence | Cloud access |
+| --- | --- | --- | --- |
+| Windows native | Tauri + React | SQLite through the SQL plugin | Supabase JS / PostgREST |
+| iOS native | SwiftUI | SwiftData | Auth REST / PostgREST |
+| Web / installed PWA | React + Vite | IndexedDB | Supabase JS / PostgREST + Realtime notifications |
 
-- `docs/pwa-product-design.md`
+Each ordinary mutation saves the task and a pending snapshot atomically, then updates the UI and requests background sync. Windows uses an SQLite enqueue trigger, Web uses a transaction spanning both stores, and iOS uses one explicit SwiftData save. iOS changes still require Xcode and device validation.
 
-For the technical architecture, read:
+The durable sync path uploads pending snapshots sequentially, then fetches the account's task list. Cache writes preserve pending local changes. Realtime is implemented in Web as a refresh hint; it is not an operation log. Native clients use startup, local edits, foreground/network recovery and manual refresh.
 
-- `docs/pwa-architecture.md`
+`packages/core` contains TypeScript task rules and the per-account scheduler used by Windows/Web. Swift implements corresponding behavior separately. `apps/api` is reserved and is not a deployed backend. No custom `/tasks/operations` endpoint or incremental cursor currently exists.
 
-The short version:
-
-```text
-iOS SwiftUI app ----------\
-                           -> Supabase Auth + Postgres public.tasks
-Windows installed PWA -----/
-
-apps/ios uses SwiftUI + SwiftData + Supabase REST.
-apps/web uses React + IndexedDB + Supabase JS.
-```
-
-`apps/api` remains a reserved future sync service. The active implementations
-sync directly to Supabase and use local-first writes with retry queues.
+Web/Windows now upload through the shared versioned-write engine and Supabase `write_task_v1` RPC, with atomic versions, durable receipts and local conflict choices. Native iOS retains legacy upsert and is deferred. The RPC is deployed in compatibility mode: legacy direct writes remain allowed, so universal cross-device protection is not yet enforced. Updated clients are local source/build artifacts, not published releases. See [sync design](sync-design.md), [data model](data-model.md), and [implementation results](云程日历_优化实施结果.md).

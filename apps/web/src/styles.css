@@ -349,3 +349,9 @@ h1 {
     width: 100%;
   }
 }
+
+.sync-compatibility, .sync-conflicts { margin: 8px 12px; font-size: 12px; }
+.sync-conflicts { padding: 12px; border: 1px solid #c58b36; border-radius: 8px; background: #fff8e9; color: #533900; }
+.sync-conflicts > div + div { border-top: 1px solid #e8cea6; margin-top: 10px; padding-top: 10px; }
+.sync-conflicts p { margin: 6px 0; }
+.sync-conflicts button { margin: 4px 8px 4px 0; padding: 6px 8px; font-size: inherit; }

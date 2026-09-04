@@ -1,3 +1,5 @@
+-- Legacy hard-delete policy. Do not rerun after sync-v1-enforce.sql,
+-- which replaces this function with tombstone-preserving soft deletion.
 create extension if not exists pg_cron with schema pg_catalog;
 
 create or replace function public.purge_completed_tasks()

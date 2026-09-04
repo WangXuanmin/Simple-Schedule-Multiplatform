@@ -1,4 +1,4 @@
-const CACHE_NAME = "simple-schedule-shell-v1";
+const CACHE_NAME = "simple-schedule-shell-v2-sync-v1";
 const APP_SHELL = [
   "./",
   "index.html",

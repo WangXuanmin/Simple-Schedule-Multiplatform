@@ -1,3 +1,5 @@
+-- Base/legacy schema. Follow with migrations/20260904_sync_v1.sql.
+-- Do not rerun these grants after activating sync-v1-enforce.sql.
 create table if not exists public.tasks (
   id uuid primary key,
   user_id uuid not null references auth.users(id) on delete cascade,

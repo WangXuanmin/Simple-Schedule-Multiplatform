@@ -1,90 +1,17 @@
 # Implementation Status
 
-## Native iOS app
+Updated 2026-09-04. The additive database migration was deployed and tested. This main-branch change publishes Web through Pages after validation; see the commit's Actions run for deployment status. Windows binaries remain local. Prior-turn iOS source changes are retained locally and excluded from this publication at the user's request.
 
-- Added `apps/ios/SimpleScheduleIOS.xcodeproj` for Xcode.
-- Added SwiftUI screens for Supabase login, task list, add task, complete/reopen,
-  soft-delete, refresh, and sync status.
-- Added SwiftData local storage for tasks and pending writes.
-- Added Supabase Auth REST and PostgREST task sync against the existing
-  `public.tasks` table used by the Windows PWA.
+| Area | Implemented | Validation |
+| --- | --- | --- |
+| Windows native | SQLite atomic queue/ack/conflict resolution, additive old-store upgrade, versioned RPC | 11 SQLite/storage tests; typecheck/frontend and native release build passed; desktop interaction acceptance pending |
+| Web/PWA | IndexedDB atomic queue/ack, versioned RPC, conflict choices, compatibility notice | Typecheck/build and 12 isolated Chromium checks passed |
+| iOS native | Prior-turn local reliability source changes retained; legacy cloud writes | No new iOS work this round; Xcode/migration/device validation and versioned protocol integration deferred |
+| Shared core | Account-aware merge, serial scheduler/retries, durable dependency-aware uploader | 13 tests passed |
+| Supabase | Version trigger, write_task_v1, private receipts and capabilities deployed | Real SQL transactional suite and 9 real Auth/PostgREST scenarios passed; temporary test users cleaned up |
+| Strict enforcement | Permission/soft-retention script prepared | Not activated; current capabilities strict=false; direct legacy writes remain permitted |
+| CI | PR/main checks; Pages also requires tests/typechecks/builds | Local gate passed; GitHub results are attached to the published commit |
 
-## PWA completed
+Native iOS and old deployed clients still use direct writes. The new RPC detects conflicts, but compatibility mode permits legacy bypass. The existing retention job still hard-deletes old completed rows; strict activation must preserve tombstones. No standalone API or incremental cursor is implemented.
 
-- Created `apps/web` as a React + Vite PWA.
-- Added PWA manifest and app icon.
-- Added Supabase environment templates.
-- Added local `.env.local` with the current Supabase project URL and anon key.
-- Added `supabase/schema.sql` with `tasks`, `task_operations`, indexes, and RLS policies.
-- Executed `supabase/schema.sql` successfully in the Supabase SQL Editor.
-- Added explicit Data API grants for `authenticated` because new tables are not
-  automatically exposed in this Supabase project.
-- Implemented email + password sign-in and sign-up UI.
-- Implemented Todo and Completed views.
-- Implemented add, complete, reopen, and soft-delete task actions.
-- Implemented IndexedDB local cache.
-- Implemented pending cloud-write queue for offline or failed writes.
-- Implemented automatic cloud-write attempts after task changes.
-- Enabled Supabase Realtime for `public.tasks` and added client-side Realtime
-  refresh so other devices update after task changes without manual refresh.
-- Added foreground and online-resume sync to reconcile changes missed while the
-  app was backgrounded, sleeping, or offline.
-- Replaced the top-right sync status badge with a compact manual refresh button.
-- Updated the refresh button to use a stable SVG icon instead of CSS pseudo
-  elements.
-- Replaced the hand-written inline refresh paths with a dedicated public
-  `icons/refresh.svg` asset for more consistent rendering across Windows and
-  iPhone.
-- Replaced the refresh SVG asset with a 200x200 PNG asset to avoid iOS PWA
-  small-SVG rasterization differences.
-- Kept sync status text in the lower-left footer.
-- Removed the visible sign-out button from the main task surface for the
-  personal single-user workflow.
-- Added deadline urgency colors: today or earlier uses red, and future
-  deadlines less than 3 calendar days away use blue.
-- Added automatic local date refresh so deadline urgency colors update after
-  midnight or when the app returns to the foreground.
-- Added GitHub Pages deployment workflow for HTTPS hosting.
-- GitHub Pages deployment succeeded:
-  `https://wangxuanmin.github.io/Simple-Schedule-Multiplatform/`
-- Adjusted Windows PWA layout so the task surface fills the app viewport by
-  default instead of rendering as a centered card.
-- Added PNG PWA icons for Safari Home Screen and web manifest usage.
-- Kept `apps/api` as a later phase for server-controlled sync.
-
-## Still Needs User / Remote Setup
-
-- Push the latest local commits to GitHub after local changes.
-- Reinstall the iPhone Home Screen PWA after icon changes because iOS caches
-  home screen icons aggressively.
-- Test the latest deployed layout after GitHub Actions finishes.
-- Decide whether always-on-top should remain an OS/tooling concern or justify a
-  native Windows wrapper later.
-
-## Current Architecture
-
-```text
-apps/ios
-  -> SwiftData local cache
-  -> Supabase Auth REST
-  -> Supabase PostgREST public.tasks
-
-apps/web
-  -> IndexedDB local cache
-  -> Supabase Auth
-  -> Supabase Postgres with RLS
-
-apps/api
-  -> reserved for later operation-based sync
-```
-
-## Codex MCP
-
-Supabase MCP setup instructions are documented in:
-
-```text
-docs/codex-supabase-mcp.md
-```
-
-Status: MCP server config has been added to `~/.codex/config.toml`; CLI PATH was
-fixed so `codex` can be run from PowerShell.
+See [optimization results](云程日历_优化实施结果.md), [sync design](sync-design.md) and [deployment](deployment.md) for evidence, rollout order and remaining work.

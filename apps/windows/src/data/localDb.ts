@@ -1,19 +1,12 @@
 import Database from "@tauri-apps/plugin-sql";
-import type { Task } from "@simple-schedule/core";
+import { localConflictCopy, type Task, type PendingWrite } from "@simple-schedule/core";
+import { TASK_TABLE_SQL, PENDING_TABLE_SQL, QUEUE_INSERT_SQL, CACHE_UPSERT_SQL, QUEUE_TASK_TRIGGER, ACK_TRIGGER, RESOLUTION_TRIGGER } from "./localSchema.ts";
 
 const DB_URL = "sqlite:simple-schedule-windows.db";
 
 let dbPromise: Promise<Database> | null = null;
 
-export type PendingTaskWrite = {
-  id: string;
-  userId: string;
-  taskId: string;
-  task: Task;
-  createdAt: string;
-  retryCount: number;
-  lastError: string | null;
-};
+export type PendingTaskWrite = PendingWrite & { userId: string; taskId: string };
 
 type TaskRow = {
   id: string;
@@ -25,6 +18,7 @@ type TaskRow = {
   urgency: string;
   createdAt: string;
   updatedAt: string;
+  version: number | null;
 };
 
 type PendingTaskWriteRow = {
@@ -35,6 +29,9 @@ type PendingTaskWriteRow = {
   createdAt: string;
   retryCount: number;
   lastError: string | null;
+  baseVersion: number | null;
+  dependsOn: string | null;
+  conflictJson: string | null;
 };
 
 export async function getLocalTasks(userId: string): Promise<Task[]> {
@@ -49,7 +46,7 @@ export async function getLocalTasks(userId: string): Promise<Task[]> {
       deleted_at as deletedAt,
       urgency,
       created_at as createdAt,
-      updated_at as updatedAt
+      updated_at as updatedAt, version
     from tasks
     where user_id = $1`,
     [userId]
@@ -57,18 +54,7 @@ export async function getLocalTasks(userId: string): Promise<Task[]> {
   return rows.map(fromTaskRow);
 }
 
-export async function saveLocalTask(task: Task): Promise<void> {
-  const db = await openDb();
-  await upsertTask(db, task);
-}
 
-export async function replaceLocalTasks(userId: string, tasks: Task[]): Promise<void> {
-  const db = await openDb();
-  await db.execute("delete from tasks where user_id = $1", [userId]);
-  for (const task of tasks) {
-    await upsertTask(db, task);
-  }
-}
 
 export async function mergeLocalTasks(tasks: Task[]): Promise<void> {
   const db = await openDb();
@@ -87,10 +73,11 @@ export async function getPendingTaskWrites(userId: string): Promise<PendingTaskW
       task_json as taskJson,
       created_at as createdAt,
       retry_count as retryCount,
-      last_error as lastError
+      last_error as lastError,
+      base_version as baseVersion, depends_on as dependsOn, conflict_json as conflictJson
     from pending_task_writes
     where user_id = $1
-    order by created_at asc`,
+    order by rowid asc`,
     [userId]
   );
   return rows.map((row) => ({
@@ -100,7 +87,9 @@ export async function getPendingTaskWrites(userId: string): Promise<PendingTaskW
     task: JSON.parse(row.taskJson) as Task,
     createdAt: row.createdAt,
     retryCount: row.retryCount,
-    lastError: row.lastError
+    lastError: row.lastError,
+    baseVersion: row.baseVersion, dependsOn: row.dependsOn,
+    conflict: row.conflictJson ? JSON.parse(row.conflictJson) : null
   }));
 }
 
@@ -115,26 +104,8 @@ export async function getPendingTaskWriteCount(userId: string): Promise<number> 
 
 export async function savePendingTaskWrite(write: PendingTaskWrite): Promise<void> {
   const db = await openDb();
-  await db.execute("delete from pending_task_writes where user_id = $1 and task_id = $2 and id <> $3", [
-    write.userId,
-    write.taskId,
-    write.id
-  ]);
   await db.execute(
-    `insert into pending_task_writes (
-      id,
-      user_id,
-      task_id,
-      task_json,
-      created_at,
-      retry_count,
-      last_error
-    )
-    values ($1, $2, $3, $4, $5, $6, $7)
-    on conflict(id) do update set
-      task_json = excluded.task_json,
-      retry_count = excluded.retry_count,
-      last_error = excluded.last_error`,
+    QUEUE_INSERT_SQL,
     [
       write.id,
       write.userId,
@@ -161,13 +132,13 @@ export async function deletePendingTaskWrite(id: string): Promise<void> {
   await db.execute("delete from pending_task_writes where id = $1", [id]);
 }
 
-export async function setSyncMetadata(lastSyncAt: string): Promise<void> {
+export async function setSyncMetadata(userId: string, lastSyncAt: string): Promise<void> {
   const db = await openDb();
   await db.execute(
     `insert into sync_metadata (key, value)
-    values ('lastSyncAt', $1)
+    values ($1, $2)
     on conflict(key) do update set value = excluded.value`,
-    [lastSyncAt]
+    [`lastSyncAt:${userId}`, lastSyncAt]
   );
 }
 
@@ -176,39 +147,30 @@ async function openDb(): Promise<Database> {
     dbPromise = Database.load(DB_URL).then(async (db) => {
       await ensureSchema(db);
       return db;
-    });
+    }).catch((error) => { dbPromise = null; throw error; });
   }
   return dbPromise;
 }
 
 async function ensureSchema(db: Database): Promise<void> {
-  await db.execute(`
-    create table if not exists tasks (
-      id text primary key,
-      user_id text not null,
-      title text not null,
-      deadline_at text not null,
-      completed_at text,
-      deleted_at text,
-      urgency text not null default 'normal',
-      created_at text not null,
-      updated_at text not null
-    )
-  `);
+  await db.execute(TASK_TABLE_SQL);
   await db.execute("create index if not exists tasks_user_idx on tasks (user_id)");
   await db.execute("create index if not exists tasks_user_updated_idx on tasks (user_id, updated_at)");
-  await db.execute(`
-    create table if not exists pending_task_writes (
-      id text primary key,
-      user_id text not null,
-      task_id text not null,
-      task_json text not null,
-      created_at text not null,
-      retry_count integer not null default 0,
-      last_error text
-    )
-  `);
+  await db.execute(PENDING_TABLE_SQL);
   await db.execute("create index if not exists pending_task_writes_user_idx on pending_task_writes (user_id, created_at)");
+  // Additive upgrades preserve all legacy tasks and pending snapshots.
+  for (const [table, columns] of Object.entries({ tasks: { version: "integer" }, pending_task_writes: {
+    base_version: "integer", depends_on: "text", conflict_json: "text", ack_json: "text", resolution_json: "text"
+  } })) {
+    const existing = await db.select<Array<{ name: string }>>(`pragma table_info(${table})`);
+    for (const [name, type] of Object.entries(columns)) {
+      if (!existing.some((column) => column.name === name)) await db.execute(`alter table ${table} add column ${name} ${type}`);
+    }
+  }
+  await db.execute("drop trigger if exists persist_queued_task");
+  await db.execute(QUEUE_TASK_TRIGGER);
+  await db.execute(ACK_TRIGGER);
+  await db.execute(RESOLUTION_TRIGGER);
   await db.execute(`
     create table if not exists sync_metadata (
       key text primary key,
@@ -225,27 +187,7 @@ async function ensureSchema(db: Database): Promise<void> {
 
 async function upsertTask(db: Database, task: Task): Promise<void> {
   await db.execute(
-    `insert into tasks (
-      id,
-      user_id,
-      title,
-      deadline_at,
-      completed_at,
-      deleted_at,
-      urgency,
-      created_at,
-      updated_at
-    )
-    values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-    on conflict(id) do update set
-      user_id = excluded.user_id,
-      title = excluded.title,
-      deadline_at = excluded.deadline_at,
-      completed_at = excluded.completed_at,
-      deleted_at = excluded.deleted_at,
-      urgency = excluded.urgency,
-      created_at = excluded.created_at,
-      updated_at = excluded.updated_at`,
+    CACHE_UPSERT_SQL,
     [
       task.id.toLowerCase(),
       task.userId.toLowerCase(),
@@ -255,7 +197,7 @@ async function upsertTask(db: Database, task: Task): Promise<void> {
       task.deletedAt,
       task.urgency,
       task.createdAt,
-      task.updatedAt
+      task.updatedAt, task.version ?? null
     ]
   );
 }
@@ -270,6 +212,27 @@ function fromTaskRow(row: TaskRow): Task {
     deletedAt: row.deletedAt,
     urgency: row.urgency === "rush" || row.urgency === "urgent" ? row.urgency : "normal",
     createdAt: row.createdAt,
-    updatedAt: row.updatedAt
+    updatedAt: row.updatedAt, version: row.version ?? undefined
   };
+}
+
+export async function acknowledgePendingWrite(id: string, task: Task): Promise<void> {
+  const db = await openDb();
+  await db.execute("update pending_task_writes set ack_json = $1 where id = $2", [JSON.stringify(task), id]);
+}
+
+export async function markPendingTaskWriteConflict(id: string, task: Task | null, reason: string): Promise<void> {
+  const db = await openDb();
+  await db.execute("update pending_task_writes set conflict_json = $1, last_error = $2 where id = $3", [JSON.stringify({ task, reason }), reason, id]);
+}
+
+export async function resolvePendingConflict(userId: string, requestId: string, copy: boolean): Promise<void> {
+  const db = await openDb();
+  const writes = await getPendingTaskWrites(userId);
+  const conflict = writes.find((write) => write.id === requestId);
+  if (!conflict?.conflict) throw new Error("冲突状态已变化，请重新同步");
+  const latest = writes.filter((write) => write.taskId === conflict.taskId).at(-1)!;
+  const resolution = { expectedLatestId: latest.id, copy: copy ? localConflictCopy(latest.task) : null, requestId: crypto.randomUUID() };
+  const result = await db.execute("update pending_task_writes set resolution_json = $1 where id = $2 and user_id = $3", [JSON.stringify(resolution), requestId, userId]);
+  if (!result.rowsAffected) throw new Error("冲突状态已变化，请重新同步");
 }

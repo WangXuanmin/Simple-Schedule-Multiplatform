@@ -1,3 +1,6 @@
+export { createSyncScheduler, errorMessage, isRetryableSyncError, syncRetryDelay } from "./sync.ts";
+export * from "./syncProtocol.ts";
+
 export type Task = {
   id: string;
   userId: string;
@@ -8,6 +11,7 @@ export type Task = {
   urgency: TaskUrgency;
   createdAt: string;
   updatedAt: string;
+  version?: number;
 };
 
 export type TaskUrgency = "normal" | "rush" | "urgent";
@@ -52,7 +56,15 @@ export function isExpiredCompletedTask(task: Task, now = new Date()): boolean {
 }
 
 export function mergeTasks(...taskGroups: Task[][]): Task[] {
-  return taskGroups.flat().reduce<Task[]>((merged, task) => upsertTask(merged, task), []);
+  const merged = new Map<string, Task>();
+  for (const group of taskGroups) {
+    for (const task of group) {
+      const key = `${task.userId.toLowerCase()}:${task.id.toLowerCase()}`;
+      const current = merged.get(key);
+      merged.set(key, current ? newerTask(task, current) : task);
+    }
+  }
+  return [...merged.values()];
 }
 
 export function applyTaskOperation(tasks: Task[], operation: TaskOperation): Task[] {
@@ -96,6 +108,10 @@ function upsertTask(tasks: Task[], incoming: Task): Task[] {
 }
 
 function newerTask(incoming: Task, current: Task): Task {
+  if (incoming.version !== undefined && incoming.version !== current.version) {
+    return incoming.version > (current.version ?? -1) ? incoming : current;
+  }
+  if (current.version !== undefined && incoming.version === undefined) return current;
   if (current.deletedAt && !incoming.deletedAt) return current;
   if (incoming.deletedAt && !current.deletedAt) return incoming;
   return new Date(incoming.updatedAt).getTime() >= new Date(current.updatedAt).getTime()

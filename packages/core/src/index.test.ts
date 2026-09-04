@@ -39,3 +39,18 @@ test("mergeTasks does not revive deleted tasks with older snapshots", () => {
   assert.equal(merged.length, 1);
   assert.equal(merged[0]?.deletedAt, deleted.deletedAt);
 });
+
+test("mergeTasks isolates identical task IDs belonging to different accounts", () => {
+  const merged = mergeTasks([task()], [task({ userId: "user-2", title: "Other account" })]);
+  assert.equal(merged.length, 2);
+  assert.equal(merged[0].title, "Original");
+});
+
+test("mergeTasks keeps deletion priority with a faster live device clock", () => {
+  const merged = mergeTasks([task({ deletedAt: "2026-06-09T09:00:00Z" })], [task({ updatedAt: "2030-01-01T00:00:00Z" })]);
+  assert.ok(merged[0].deletedAt);
+});
+
+test("mergeTasks normalizes UUID case when identifying the same task", () => {
+  assert.equal(mergeTasks([task()], [task({ id: "TASK-1", userId: "USER-1" })]).length, 1);
+});
